@@ -45,6 +45,21 @@ export interface ImmuneInfection {
   detected_at: string;
 }
 
+export interface CognitiveLoadMetric {
+  id: string;
+  organization_id: string;
+  metric_date: string;
+  workload_score: number;
+  interaction_density: number;
+  meeting_pressure: number;
+  task_fragmentation: number;
+  decision_fatigue: number;
+  burnout_risk: number;
+  composite_score: number;
+  team_breakdown: Record<string, number> | null;
+  created_at: string;
+}
+
 export interface MetabolicMetric {
   id: string;
   organization_id: string;

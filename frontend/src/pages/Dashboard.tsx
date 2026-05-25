@@ -3,6 +3,7 @@ import { useGenome, useAnalyzeGenome } from '../hooks/useGenome';
 import { useDarkMatter, useAnalyzeDarkMatter } from '../hooks/useDarkMatter';
 import { useInfections, useAnalyzeInfections } from '../hooks/useImmune';
 import { useMetabolic, useAnalyzeMetabolic } from '../hooks/useMetabolic';
+import { useCognitiveLoad, useAnalyzeCognitiveLoad } from '../hooks/useCognitiveLoad';
 import { usePolling } from '../hooks/usePolling';
 import { useQueryClient } from '@tanstack/react-query';
 import HealthGauge from '../components/HealthGauge';
@@ -17,29 +18,33 @@ export default function Dashboard() {
   const { data: darkMatter, isLoading: dmLoading } = useDarkMatter();
   const { data: infections, isLoading: infLoading } = useInfections();
   const { data: metabolic, isLoading: metLoading } = useMetabolic();
+  const { data: cognitiveLoad, isLoading: clLoading } = useCognitiveLoad();
 
   const analyzeGenome = useAnalyzeGenome();
   const analyzeDM = useAnalyzeDarkMatter();
   const analyzeInf = useAnalyzeInfections();
   const analyzeMet = useAnalyzeMetabolic();
+  const analyzeCL = useAnalyzeCognitiveLoad();
 
   usePolling(useCallback(() => {
     qc.invalidateQueries({ queryKey: ['genome'] });
     qc.invalidateQueries({ queryKey: ['darkMatter'] });
     qc.invalidateQueries({ queryKey: ['infections'] });
     qc.invalidateQueries({ queryKey: ['metabolic'] });
+    qc.invalidateQueries({ queryKey: ['cognitiveLoad'] });
   }, [qc]), 30000);
 
-  const isLoading = genomeLoading || dmLoading || infLoading || metLoading;
+  const isLoading = genomeLoading || dmLoading || infLoading || metLoading || clLoading;
 
   const handleRunAll = () => {
     analyzeGenome.mutate();
     analyzeDM.mutate();
     analyzeInf.mutate();
     analyzeMet.mutate();
+    analyzeCL.mutate();
   };
 
-  const isRunning = analyzeGenome.isPending || analyzeDM.isPending || analyzeInf.isPending || analyzeMet.isPending;
+  const isRunning = analyzeGenome.isPending || analyzeDM.isPending || analyzeInf.isPending || analyzeMet.isPending || analyzeCL.isPending;
 
   return (
     <div className="space-y-8">
@@ -67,7 +72,7 @@ export default function Dashboard() {
         <LoadingSkeleton lines={6} />
       ) : (
         <>
-          <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-4">
             <div className="neuron-card flex items-center justify-center">
               <HealthGauge score={genome?.health_score ?? 0} />
             </div>
@@ -98,6 +103,13 @@ export default function Dashboard() {
               subtitle="Org velocity"
               icon="⚡"
               color="#8b5cf6"
+            />
+            <MetricCard
+              title="Cognitive Load"
+              value={cognitiveLoad ? `${Math.round(cognitiveLoad.composite_score * 100)}%` : 'N/A'}
+              subtitle="Burnout risk"
+              icon="🧠"
+              color={cognitiveLoad?.composite_score && cognitiveLoad.composite_score > 0.6 ? '#ef4444' : '#8b5cf6'}
             />
           </div>
 

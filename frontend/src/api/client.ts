@@ -14,7 +14,7 @@ async function getOrgId(): Promise<string> {
   const res = await fetch(`${API_BASE}/api/v1/orgs/first`);
   if (!res.ok) throw new ApiError(res.status, 'Failed to fetch organization');
   const org = await res.json();
-  _orgId = org.id;
+  _orgId = org.id as string;
   return _orgId;
 }
 

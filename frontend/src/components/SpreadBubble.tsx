@@ -26,7 +26,7 @@ export default function SpreadBubble({ data }: Props) {
     const root = d3.hierarchy({ children: data })
       .sum(d => (d as unknown as BubbleItem).value || 1);
 
-    const nodes = pack(root).leaves();
+    const nodes = pack(root as any).leaves();
 
     const g = svg.append('g').attr('transform', 'translate(20,20)');
 

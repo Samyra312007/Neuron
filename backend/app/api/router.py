@@ -5,15 +5,19 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database.session import get_db
-from app.database.models import Organization, GenomeSequence, DarkMatterReport, ImmuneInfection, MetabolicMetric
+from app.database.models import Organization, GenomeSequence, DarkMatterReport, ImmuneInfection, MetabolicMetric, CognitiveLoadMetric
 from app.agents import genotyper, dark_scanner, immune
 from app.agents.metabolic import metabolic
+from app.agents.cognitive_load import cognitive_load
 from app.api.health import router as health_router
 from app.api.genome import router as genome_router
 from app.api.dark_matter import router as dark_matter_router
 from app.api.immune import router as immune_router
 from app.api.orgs import router as orgs_router
 from app.api.metabolic import router as metabolic_router
+from app.api.cognitive_load import router as cognitive_load_router
+from app.api.ripple import router as ripple_router
+from app.api.fossil import router as fossil_router
 
 router = APIRouter()
 
@@ -23,6 +27,9 @@ router.include_router(dark_matter_router)
 router.include_router(immune_router)
 router.include_router(orgs_router)
 router.include_router(metabolic_router)
+router.include_router(cognitive_load_router)
+router.include_router(ripple_router)
+router.include_router(fossil_router)
 
 
 @router.get("/")
@@ -119,6 +126,26 @@ async def run_all_agents(org_id: str, db: AsyncSession = Depends(get_db)):
         results["metabolic"] = {"composite_score": metric.composite_score}
     else:
         results["metabolic"] = {"error": metabolic_data["error"]}
+
+    cognitive_data = await cognitive_load.run(db, org_id)
+    if "error" not in cognitive_data:
+        metric = CognitiveLoadMetric(
+            organization_id=org_id,
+            metric_date=date.today(),
+            workload_score=cognitive_data.get("workload_score", 0.0),
+            interaction_density=cognitive_data.get("interaction_density", 0.0),
+            meeting_pressure=cognitive_data.get("meeting_pressure", 0.0),
+            task_fragmentation=cognitive_data.get("task_fragmentation", 0.0),
+            decision_fatigue=cognitive_data.get("decision_fatigue", 0.0),
+            burnout_risk=cognitive_data.get("burnout_risk", 0.0),
+            composite_score=cognitive_data.get("composite_score", 0.0),
+            team_breakdown=cognitive_data.get("team_breakdown"),
+        )
+        db.add(metric)
+        await db.flush()
+        results["cognitive_load"] = {"composite_score": metric.composite_score}
+    else:
+        results["cognitive_load"] = {"error": cognitive_data["error"]}
 
     await db.commit()
     return results

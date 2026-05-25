@@ -32,6 +32,7 @@ class Organization(Base):
     genome_sequences: Mapped[list["GenomeSequence"]] = relationship("GenomeSequence", back_populates="organization", cascade="all, delete-orphan")
     dark_matter_reports: Mapped[list["DarkMatterReport"]] = relationship("DarkMatterReport", back_populates="organization", cascade="all, delete-orphan")
     metabolic_metrics: Mapped[list["MetabolicMetric"]] = relationship("MetabolicMetric", back_populates="organization", cascade="all, delete-orphan")
+    cognitive_load_metrics: Mapped[list["CognitiveLoadMetric"]] = relationship("CognitiveLoadMetric", back_populates="organization", cascade="all, delete-orphan")
     immune_infections: Mapped[list["ImmuneInfection"]] = relationship("ImmuneInfection", back_populates="organization", cascade="all, delete-orphan")
     fossil_snapshots: Mapped[list["FossilSnapshot"]] = relationship("FossilSnapshot", back_populates="organization", cascade="all, delete-orphan")
 
@@ -160,6 +161,30 @@ class MetabolicMetric(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
     organization: Mapped["Organization"] = relationship("Organization", back_populates="metabolic_metrics")
+
+
+# ─────────────────────────────────────────────
+# COGNITIVE LOAD
+# ─────────────────────────────────────────────
+
+class CognitiveLoadMetric(Base):
+    __tablename__ = "cognitive_load_metrics"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=gen_uuid)
+    organization_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("organizations.id"), nullable=False)
+    metric_date: Mapped[date] = mapped_column(Date, nullable=False)
+
+    workload_score: Mapped[float] = mapped_column(Float, default=0.0)
+    interaction_density: Mapped[float] = mapped_column(Float, default=0.0)
+    meeting_pressure: Mapped[float] = mapped_column(Float, default=0.0)
+    task_fragmentation: Mapped[float] = mapped_column(Float, default=0.0)
+    decision_fatigue: Mapped[float] = mapped_column(Float, default=0.0)
+    burnout_risk: Mapped[float] = mapped_column(Float, default=0.0)
+    composite_score: Mapped[float] = mapped_column(Float, default=0.0)
+    team_breakdown: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+    organization: Mapped["Organization"] = relationship("Organization", back_populates="cognitive_load_metrics")
 
 
 # ─────────────────────────────────────────────

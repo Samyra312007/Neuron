@@ -25,7 +25,7 @@ export default function DarkMatterTreemap({ data }: Props) {
     const root = d3.hierarchy({ children: data })
       .sum(d => (d as unknown as TreemapItem).value || 1);
 
-    d3.treemap<unknown>().size([width, height]).padding(4)(root);
+    d3.treemap<unknown>().size([width, height]).padding(4)(root as any);
 
     const cell = svg.selectAll('g')
       .data(root.leaves())

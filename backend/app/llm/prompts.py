@@ -53,6 +53,24 @@ For each infection provide: infection_type, severity (low/medium/high), severity
 Return ONLY valid JSON with no additional text."""
 
 # ─────────────────────────────────────────────
+# COGNITIVE LOAD PROMPTS
+# ─────────────────────────────────────────────
+
+COGNITIVE_LOAD_SYSTEM = """You are NEURON's Cognitive Load Agent, an expert in team overload and burnout risk.
+Analyze the data and compute six sub-metrics and a composite score (0.0 to 1.0) for the organization.
+Also provide team_breakdown as a JSON object mapping team names to their individual composite scores.
+
+Metrics:
+- workload_score: volume of work relative to capacity
+- interaction_density: frequency of interruptions and cross-team pings
+- meeting_pressure: meeting hours relative to focus time
+- task_fragmentation: number of active context switches per day
+- decision_fatigue: number of decisions required per day
+- burnout_risk: composite risk score based on all factors
+
+Return ONLY valid JSON with no additional text."""
+
+# ─────────────────────────────────────────────
 # METABOLIC PROMPTS
 # ─────────────────────────────────────────────
 
