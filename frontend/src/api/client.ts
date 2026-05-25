@@ -7,8 +7,25 @@ export class ApiError extends Error {
   }
 }
 
+let _orgId: string | null = null;
+
+async function getOrgId(): Promise<string> {
+  if (_orgId) return _orgId;
+  const res = await fetch(`${API_BASE}/api/v1/orgs/first`);
+  if (!res.ok) throw new ApiError(res.status, 'Failed to fetch organization');
+  const org = await res.json();
+  _orgId = org.id;
+  return _orgId;
+}
+
+export function resetOrgId() {
+  _orgId = null;
+}
+
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
-  const url = `${API_BASE}/api/v1${path}`;
+  const orgId = await getOrgId();
+  const separator = path.includes('?') ? '&' : '?';
+  const url = `${API_BASE}/api/v1${path}${separator}org_id=${orgId}`;
   const res = await fetch(url, {
     headers: { 'Content-Type': 'application/json', ...options?.headers },
     ...options,

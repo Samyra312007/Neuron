@@ -1,14 +1,12 @@
 import { api } from './client';
 import type { ImmuneInfection } from '../types';
 
-const ORG_ID = 'default';
-
 export function fetchInfections() {
-  return api.get<ImmuneInfection[]>(`/immune/infections?org_id=${ORG_ID}`);
+  return api.get<ImmuneInfection[]>('/immune/infections');
 }
 
 export function analyzeInfections() {
-  return api.post<ImmuneInfection[]>(`/immune/analyze?org_id=${ORG_ID}`);
+  return api.post<ImmuneInfection[]>('/immune/analyze');
 }
 
 export function treatInfection(infectionId: string) {

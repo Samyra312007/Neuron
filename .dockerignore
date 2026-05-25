@@ -1,0 +1,17 @@
+node_modules/
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.env
+.git/
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+pgdata/
+*.log
+dist/
+build/

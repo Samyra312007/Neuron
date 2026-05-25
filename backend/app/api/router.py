@@ -11,6 +11,7 @@ from app.api.health import router as health_router
 from app.api.genome import router as genome_router
 from app.api.dark_matter import router as dark_matter_router
 from app.api.immune import router as immune_router
+from app.api.orgs import router as orgs_router
 
 router = APIRouter()
 
@@ -18,6 +19,7 @@ router.include_router(health_router)
 router.include_router(genome_router)
 router.include_router(dark_matter_router)
 router.include_router(immune_router)
+router.include_router(orgs_router)
 
 
 @router.get("/")
