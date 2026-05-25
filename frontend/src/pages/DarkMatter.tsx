@@ -1,5 +1,6 @@
 import { useDarkMatter, useAnalyzeDarkMatter } from '../hooks/useDarkMatter';
 import MetricCard from '../components/MetricCard';
+import DarkMatterTreemap from '../components/DarkMatterTreemap';
 import AlertBanner from '../components/AlertBanner';
 import LoadingSkeleton from '../components/LoadingSkeleton';
 import { formatCurrency } from '../lib/utils';
@@ -15,6 +16,14 @@ const CATEGORIES = [
 export default function DarkMatter() {
   const { data: report, isLoading, error } = useDarkMatter();
   const analyze = useAnalyzeDarkMatter();
+
+  const treemapData = report ? CATEGORIES.map(({ key, label, costKey, color }) => ({
+    name: key,
+    label,
+    value: report[key as keyof typeof report] as number,
+    cost: report[costKey as keyof typeof report] as number,
+    color,
+  })) : [];
 
   return (
     <div className="space-y-8">
@@ -46,6 +55,11 @@ export default function DarkMatter() {
             <h2 className="text-sm font-semibold text-gray-400 mb-1">Total Monthly Cost</h2>
             <p className="text-4xl font-bold text-yellow-400">{formatCurrency(Number(report.total_cost))}</p>
             <p className="text-xs text-gray-500 mt-1">Estimated organizational friction cost per month</p>
+          </div>
+
+          <div className="neuron-card">
+            <h2 className="text-sm font-semibold text-gray-400 mb-4">Cost Breakdown — Treemap</h2>
+            <DarkMatterTreemap data={treemapData} />
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">

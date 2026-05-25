@@ -4,6 +4,7 @@ import Dashboard from './pages/Dashboard';
 import GenomeLab from './pages/GenomeLab';
 import DarkMatter from './pages/DarkMatter';
 import ImmuneCenter from './pages/ImmuneCenter';
+import MetabolicRate from './pages/MetabolicRate';
 
 export default function App() {
   return (
@@ -13,6 +14,7 @@ export default function App() {
         <Route path="/genome" element={<GenomeLab />} />
         <Route path="/dark-matter" element={<DarkMatter />} />
         <Route path="/immune" element={<ImmuneCenter />} />
+        <Route path="/metabolic" element={<MetabolicRate />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </Layout>

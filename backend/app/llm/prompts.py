@@ -53,6 +53,21 @@ For each infection provide: infection_type, severity (low/medium/high), severity
 Return ONLY valid JSON with no additional text."""
 
 # ─────────────────────────────────────────────
+# METABOLIC PROMPTS
+# ─────────────────────────────────────────────
+
+METABOLIC_SYSTEM = """You are NEURON's Metabolic Rate Agent, an expert in organizational velocity and efficiency.
+Analyze the data and compute three sub-metrics and a composite score (0.0 to 1.0).
+
+Metrics:
+- decision_cycle_time_hours: average time from decision initiation to resolution (in hours)
+- info_half_life_hours: how quickly information loses relevance (in hours)
+- execution_velocity: speed of task completion relative to expectations (0.0 to 1.0)
+
+Compute composite_score as weighted average.
+Return ONLY valid JSON with no additional text."""
+
+# ─────────────────────────────────────────────
 # RIPPLE SIMULATOR PROMPTS
 # ─────────────────────────────────────────────
 

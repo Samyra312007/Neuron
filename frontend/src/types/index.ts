@@ -45,6 +45,33 @@ export interface ImmuneInfection {
   detected_at: string;
 }
 
+export interface MetabolicMetric {
+  id: string;
+  organization_id: string;
+  metric_date: string;
+  decision_cycle_time_hours: number;
+  info_half_life_hours: number;
+  execution_velocity: number;
+  composite_score: number;
+  created_at: string;
+}
+
+export interface TreemapItem {
+  name: string;
+  value: number;
+  color: string;
+  label: string;
+  cost: number;
+}
+
+export interface BubbleItem {
+  id: string;
+  label: string;
+  value: number;
+  color: string;
+  severity: string;
+}
+
 export interface HealthStatus {
   status: string;
   version: string;

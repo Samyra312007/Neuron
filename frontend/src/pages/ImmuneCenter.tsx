@@ -1,12 +1,27 @@
 import { useInfections, useAnalyzeInfections, useTreatInfection } from '../hooks/useImmune';
 import InfectionCard from '../components/InfectionCard';
+import SpreadBubble from '../components/SpreadBubble';
 import AlertBanner from '../components/AlertBanner';
 import LoadingSkeleton from '../components/LoadingSkeleton';
+
+const COLOR_MAP: Record<string, string> = {
+  high: '#ef4444',
+  medium: '#f59e0b',
+  low: '#10b981',
+};
 
 export default function ImmuneCenter() {
   const { data: infections, isLoading, error } = useInfections();
   const analyze = useAnalyzeInfections();
   const treat = useTreatInfection();
+
+  const bubbleData = (infections || []).map((inf) => ({
+    id: inf.id,
+    label: inf.infection_type,
+    value: inf.severity_score * 50 + 10,
+    color: COLOR_MAP[inf.severity] || '#6b7280',
+    severity: inf.severity,
+  }));
 
   return (
     <div className="space-y-8">
@@ -44,6 +59,11 @@ export default function ImmuneCenter() {
                 infections.filter(i => i.severity === 'medium').length > 0 ? '◆ Medium' : '● Low'
               }
             </span>
+          </div>
+
+          <div className="neuron-card">
+            <h2 className="text-sm font-semibold text-gray-400 mb-4">Infection Spread</h2>
+            <SpreadBubble data={bubbleData} />
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

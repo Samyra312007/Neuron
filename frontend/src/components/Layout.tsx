@@ -7,6 +7,7 @@ const NAV_ITEMS = [
   { path: '/genome', label: 'Genome Lab', icon: '🧬' },
   { path: '/dark-matter', label: 'Dark Matter', icon: '◈' },
   { path: '/immune', label: 'Immune Center', icon: '🛡' },
+  { path: '/metabolic', label: 'Metabolic Rate', icon: '⚡' },
 ];
 
 export default function Layout({ children }: { children: ReactNode }) {

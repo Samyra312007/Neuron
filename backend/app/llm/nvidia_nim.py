@@ -93,6 +93,13 @@ class NvidiaNIMClient:
                     }
                 ]
             }"""
+        elif "metabolic" in system_prompt.lower():
+            return """{
+                "decision_cycle_time_hours": 47.5,
+                "info_half_life_hours": 168.0,
+                "execution_velocity": 0.71,
+                "composite_score": 0.68
+            }"""
         return '{"error": "unknown prompt type"}'
 
     async def close(self):

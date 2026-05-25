@@ -8,7 +8,7 @@ class Settings(BaseSettings):
     environment: str = "development"
 
     nvidia_nim_api_key: str = ""
-    nvidia_nim_base_url: str = "https://api.nvcf.nvidia.com/v2/nvcf"
+    nvidia_nim_base_url: str = "https://integrate.api.nvidia.com/v1"
     nvidia_nim_model: str = "meta/llama-3.3-70b-instruct"
 
     mock_ai: bool = False

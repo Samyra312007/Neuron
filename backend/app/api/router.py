@@ -5,13 +5,15 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database.session import get_db
-from app.database.models import Organization, GenomeSequence, DarkMatterReport, ImmuneInfection
+from app.database.models import Organization, GenomeSequence, DarkMatterReport, ImmuneInfection, MetabolicMetric
 from app.agents import genotyper, dark_scanner, immune
+from app.agents.metabolic import metabolic
 from app.api.health import router as health_router
 from app.api.genome import router as genome_router
 from app.api.dark_matter import router as dark_matter_router
 from app.api.immune import router as immune_router
 from app.api.orgs import router as orgs_router
+from app.api.metabolic import router as metabolic_router
 
 router = APIRouter()
 
@@ -20,6 +22,7 @@ router.include_router(genome_router)
 router.include_router(dark_matter_router)
 router.include_router(immune_router)
 router.include_router(orgs_router)
+router.include_router(metabolic_router)
 
 
 @router.get("/")
@@ -100,6 +103,22 @@ async def run_all_agents(org_id: str, db: AsyncSession = Depends(get_db)):
         results["immune"] = {"active_infections": count}
     else:
         results["immune"] = {"error": immune_data["error"]}
+
+    metabolic_data = await metabolic.run(db, org_id)
+    if "error" not in metabolic_data:
+        metric = MetabolicMetric(
+            organization_id=org_id,
+            metric_date=date.today(),
+            decision_cycle_time_hours=metabolic_data.get("decision_cycle_time_hours", 0.0),
+            info_half_life_hours=metabolic_data.get("info_half_life_hours", 0.0),
+            execution_velocity=metabolic_data.get("execution_velocity", 0.0),
+            composite_score=metabolic_data.get("composite_score", 0.0),
+        )
+        db.add(metric)
+        await db.flush()
+        results["metabolic"] = {"composite_score": metric.composite_score}
+    else:
+        results["metabolic"] = {"error": metabolic_data["error"]}
 
     await db.commit()
     return results

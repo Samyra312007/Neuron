@@ -1,6 +1,10 @@
+import { useCallback } from 'react';
 import { useGenome, useAnalyzeGenome } from '../hooks/useGenome';
 import { useDarkMatter, useAnalyzeDarkMatter } from '../hooks/useDarkMatter';
 import { useInfections, useAnalyzeInfections } from '../hooks/useImmune';
+import { useMetabolic, useAnalyzeMetabolic } from '../hooks/useMetabolic';
+import { usePolling } from '../hooks/usePolling';
+import { useQueryClient } from '@tanstack/react-query';
 import HealthGauge from '../components/HealthGauge';
 import MetricCard from '../components/MetricCard';
 import AlertBanner from '../components/AlertBanner';
@@ -8,23 +12,34 @@ import LoadingSkeleton from '../components/LoadingSkeleton';
 import { formatCurrency } from '../lib/utils';
 
 export default function Dashboard() {
+  const qc = useQueryClient();
   const { data: genome, isLoading: genomeLoading, error: genomeError } = useGenome();
   const { data: darkMatter, isLoading: dmLoading } = useDarkMatter();
   const { data: infections, isLoading: infLoading } = useInfections();
+  const { data: metabolic, isLoading: metLoading } = useMetabolic();
 
   const analyzeGenome = useAnalyzeGenome();
   const analyzeDM = useAnalyzeDarkMatter();
   const analyzeInf = useAnalyzeInfections();
+  const analyzeMet = useAnalyzeMetabolic();
 
-  const isLoading = genomeLoading || dmLoading || infLoading;
+  usePolling(useCallback(() => {
+    qc.invalidateQueries({ queryKey: ['genome'] });
+    qc.invalidateQueries({ queryKey: ['darkMatter'] });
+    qc.invalidateQueries({ queryKey: ['infections'] });
+    qc.invalidateQueries({ queryKey: ['metabolic'] });
+  }, [qc]), 30000);
+
+  const isLoading = genomeLoading || dmLoading || infLoading || metLoading;
 
   const handleRunAll = () => {
     analyzeGenome.mutate();
     analyzeDM.mutate();
     analyzeInf.mutate();
+    analyzeMet.mutate();
   };
 
-  const isRunning = analyzeGenome.isPending || analyzeDM.isPending || analyzeInf.isPending;
+  const isRunning = analyzeGenome.isPending || analyzeDM.isPending || analyzeInf.isPending || analyzeMet.isPending;
 
   return (
     <div className="space-y-8">
@@ -52,30 +67,37 @@ export default function Dashboard() {
         <LoadingSkeleton lines={6} />
       ) : (
         <>
-          <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-            <div className="lg:col-span-1 neuron-card flex items-center justify-center">
+          <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
+            <div className="neuron-card flex items-center justify-center">
               <HealthGauge score={genome?.health_score ?? 0} />
             </div>
-            <MetricCard
-              title="Dark Matter Cost"
-              value={darkMatter ? formatCurrency(Number(darkMatter.total_cost)) : '₹0'}
-              subtitle="Invisible work this month"
-              icon="◈"
-              color="#f59e0b"
-            />
-            <MetricCard
-              title="Active Infections"
-              value={String(infections?.length ?? 0)}
-              subtitle="Organizational health threats"
-              icon="🛡"
-              color={infections && infections.length > 0 ? '#ef4444' : '#10b981'}
-            />
             <MetricCard
               title="Genome Score"
               value={genome ? `${Math.round(genome.health_score * 100)}%` : 'N/A'}
               subtitle="Overall org health"
               icon="🧬"
               color="#00b8f0"
+            />
+            <MetricCard
+              title="Dark Matter Cost"
+              value={darkMatter ? formatCurrency(Number(darkMatter.total_cost)) : '₹0'}
+              subtitle="Invisible work / month"
+              icon="◈"
+              color="#f59e0b"
+            />
+            <MetricCard
+              title="Active Infections"
+              value={String(infections?.length ?? 0)}
+              subtitle="Health threats"
+              icon="🛡"
+              color={infections && infections.length > 0 ? '#ef4444' : '#10b981'}
+            />
+            <MetricCard
+              title="Metabolic Rate"
+              value={metabolic ? `${Math.round(metabolic.composite_score * 100)}%` : 'N/A'}
+              subtitle="Org velocity"
+              icon="⚡"
+              color="#8b5cf6"
             />
           </div>
 

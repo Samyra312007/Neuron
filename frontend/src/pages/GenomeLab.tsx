@@ -1,5 +1,5 @@
 import { useGenome, useAnalyzeGenome } from '../hooks/useGenome';
-import GeneBar from '../components/GeneBar';
+import DNAHelix from '../components/DNAHelix';
 import HealthGauge from '../components/HealthGauge';
 import AlertBanner from '../components/AlertBanner';
 import LoadingSkeleton from '../components/LoadingSkeleton';
@@ -17,6 +17,12 @@ const GENE_COLORS: Record<string, string> = {
 export default function GenomeLab() {
   const { data: genome, isLoading, error } = useGenome();
   const analyze = useAnalyzeGenome();
+
+  const genes = genome ? Object.entries(GENE_LABELS).map(([key, label]) => ({
+    label,
+    score: genome[key as keyof typeof genome] as number,
+    color: GENE_COLORS[key] || '#6366f1',
+  })) : [];
 
   return (
     <div className="space-y-8">
@@ -48,17 +54,28 @@ export default function GenomeLab() {
             <div className="neuron-card flex items-center justify-center">
               <HealthGauge score={genome.health_score} />
             </div>
-            <div className="lg:col-span-2 neuron-card space-y-5">
-              <h2 className="text-sm font-semibold text-gray-400 uppercase tracking-wider">Gene Expression</h2>
-              {Object.entries(GENE_LABELS).map(([key, label]) => (
-                <GeneBar
-                  key={key}
-                  label={label}
-                  score={genome[key as keyof typeof genome] as number}
-                  color={GENE_COLORS[key] || '#6366f1'}
-                />
-              ))}
+            <div className="lg:col-span-2 neuron-card">
+              <h2 className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-4">DNA Helix</h2>
+              <DNAHelix genes={genes} />
             </div>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+            {genome && Object.entries(GENE_LABELS).map(([key, label]) => {
+              const score = genome[key as keyof typeof genome] as number;
+              const color = GENE_COLORS[key] || '#6366f1';
+              return (
+                <div key={key} className="neuron-card">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-sm text-gray-300">{label}</span>
+                    <span className="text-lg font-bold" style={{ color }}>{Math.round(score * 100)}%</span>
+                  </div>
+                  <div className="h-2 bg-gray-800 rounded-full overflow-hidden">
+                    <div className="h-full rounded-full transition-all duration-700" style={{ width: `${score * 100}%`, backgroundColor: color }} />
+                  </div>
+                </div>
+              );
+            })}
           </div>
 
           {genome.summary && (
