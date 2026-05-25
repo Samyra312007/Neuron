@@ -1,0 +1,68 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: neuron
+      POSTGRES_USER: neuron
+      POSTGRES_PASSWORD: neuron_pass
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U neuron"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    environment:
+      DATABASE_URL: postgresql+asyncpg://neuron:neuron_pass@postgres:5432/neuron
+      REDIS_URL: redis://redis:6379/0
+      NVIDIA_NIM_API_KEY: ${NVIDIA_NIM_API_KEY}
+      NVIDIA_NIM_BASE_URL: ${NVIDIA_NIM_BASE_URL:-https://api.nvcf.nvidia.com/v2/nvcf}
+      NVIDIA_NIM_MODEL: ${NVIDIA_NIM_MODEL:-meta/llama-3.3-70b-instruct}
+      MOCK_AI: ${MOCK_AI:-false}
+      SECRET_KEY: ${SECRET_KEY:-neuron-dev-secret-key-change-in-production}
+      ENVIRONMENT: development
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - ./backend/app:/app/app
+      - ./backend/alembic:/app/alembic
+      - ./backend/tests:/app/tests
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    ports:
+      - "5173:5173"
+    environment:
+      VITE_API_URL: http://localhost:8000
+    depends_on:
+      - backend
+    volumes:
+      - ./frontend/src:/app/src
+      - ./frontend/index.html:/app/index.html
+
+volumes:
+  pgdata:

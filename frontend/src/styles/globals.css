@@ -1,0 +1,36 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Inter:wght@300;400;500;600;700&display=swap');
+
+@layer base {
+  body {
+    @apply bg-gray-950 text-gray-100 font-sans antialiased;
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  }
+
+  code, pre {
+    font-family: 'JetBrains Mono', monospace;
+  }
+}
+
+@layer components {
+  .neuron-card {
+    @apply bg-gray-900 border border-gray-800 rounded-xl p-6;
+  }
+
+  .neuron-glow {
+    box-shadow: 0 0 20px rgba(0, 184, 240, 0.1), 0 0 60px rgba(0, 184, 240, 0.05);
+  }
+
+  .neuron-gradient {
+    @apply bg-gradient-to-br from-neuron-500 to-neuron-800;
+  }
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+}
