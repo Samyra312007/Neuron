@@ -5,9 +5,10 @@ import { formatCurrency } from '../lib/utils';
 
 interface Props {
   data: TreemapItem[];
+  onItemClick?: (item: TreemapItem) => void;
 }
 
-export default function DarkMatterTreemap({ data }: Props) {
+export default function DarkMatterTreemap({ data, onItemClick }: Props) {
   const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -32,14 +33,21 @@ export default function DarkMatterTreemap({ data }: Props) {
       .join('g')
       .attr('transform', d => `translate(${(d as any).x0},${(d as any).y0})`);
 
-    cell.append('rect')
+    const cellG = cell.append('rect')
       .attr('width', d => (d as any).x1 - (d as any).x0)
       .attr('height', d => (d as any).y1 - (d as any).y0)
       .attr('fill', d => (d.data as unknown as TreemapItem).color)
       .attr('fill-opacity', 0.7)
       .attr('rx', 4)
       .attr('stroke', '#1f2937')
-      .attr('stroke-width', 2);
+      .attr('stroke-width', 2)
+      .style('cursor', onItemClick ? 'pointer' : 'default');
+
+    if (onItemClick) {
+      cellG.on('click', (_: any, d: any) => {
+        onItemClick(d.data as unknown as TreemapItem);
+      });
+    }
 
     cell.append('text')
       .attr('x', 8)

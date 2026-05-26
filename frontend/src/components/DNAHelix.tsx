@@ -9,9 +9,10 @@ interface Gene {
 
 interface Props {
   genes: Gene[];
+  previousGenes?: Gene[];
 }
 
-export default function DNAHelix({ genes }: Props) {
+export default function DNAHelix({ genes, previousGenes }: Props) {
   const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -66,6 +67,8 @@ export default function DNAHelix({ genes }: Props) {
       const x1 = centerX - amplitude * sinVal;
       const x2 = centerX + amplitude * sinVal;
 
+      const prev = previousGenes?.[i];
+
       svg.append('line')
         .attr('x1', x1)
         .attr('y1', y)
@@ -75,6 +78,22 @@ export default function DNAHelix({ genes }: Props) {
         .attr('stroke-width', 4)
         .attr('stroke-opacity', gene.score)
         .attr('stroke-linecap', 'round');
+
+      if (prev) {
+        const prevSinVal = Math.sin(y * frequency);
+        const prevX1 = centerX - amplitude * prevSinVal;
+        const prevX2 = centerX + amplitude * prevSinVal;
+        svg.append('line')
+          .attr('x1', prevX1)
+          .attr('y1', y + 8)
+          .attr('x2', prevX2)
+          .attr('y2', y + 8)
+          .attr('stroke', gene.color)
+          .attr('stroke-width', 2)
+          .attr('stroke-opacity', 0.3)
+          .attr('stroke-linecap', 'round')
+          .attr('stroke-dasharray', '4,3');
+      }
 
       const labelX = x1 < centerX ? x1 - 8 : x2 + 8;
       const anchor = x1 < centerX ? 'end' : 'start';
@@ -89,7 +108,7 @@ export default function DNAHelix({ genes }: Props) {
         .attr('font-size', '11px')
         .text(gene.label);
 
-      svg.append('text')
+      const scoreText = svg.append('text')
         .attr('x', scoreLabelX)
         .attr('y', y + 4)
         .attr('text-anchor', scoreAnchor)
@@ -97,9 +116,22 @@ export default function DNAHelix({ genes }: Props) {
         .attr('font-size', '12px')
         .attr('font-weight', '700')
         .text(`${Math.round(gene.score * 100)}%`);
+
+      if (prev) {
+        const diff = gene.score - prev.score;
+        const diffColor = diff > 0 ? '#10b981' : diff < 0 ? '#ef4444' : '#6b7280';
+        svg.append('text')
+          .attr('x', scoreLabelX)
+          .attr('y', y + 20)
+          .attr('text-anchor', scoreAnchor)
+          .attr('fill', diffColor)
+          .attr('font-size', '10px')
+          .attr('font-weight', '500')
+          .text(`${diff > 0 ? '+' : ''}${(diff * 100).toFixed(0)}%`);
+      }
     });
 
-  }, [genes]);
+  }, [genes, previousGenes]);
 
   return <div ref={ref} className="w-full" style={{ minHeight: 300 }} />;
 }

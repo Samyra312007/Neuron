@@ -1,10 +1,11 @@
-import { useCallback } from 'react';
+import { useCallback, useRef } from 'react';
 import { useGenome, useAnalyzeGenome } from '../hooks/useGenome';
 import { useDarkMatter, useAnalyzeDarkMatter } from '../hooks/useDarkMatter';
 import { useInfections, useAnalyzeInfections } from '../hooks/useImmune';
 import { useMetabolic, useAnalyzeMetabolic } from '../hooks/useMetabolic';
 import { useCognitiveLoad, useAnalyzeCognitiveLoad } from '../hooks/useCognitiveLoad';
 import { usePolling } from '../hooks/usePolling';
+import { useToast } from '../components/Toast';
 import { useQueryClient } from '@tanstack/react-query';
 import HealthGauge from '../components/HealthGauge';
 import MetricCard from '../components/MetricCard';
@@ -14,11 +15,25 @@ import { formatCurrency } from '../lib/utils';
 
 export default function Dashboard() {
   const qc = useQueryClient();
+  const { addToast } = useToast();
+  const prevInfectionCount = useRef<number | null>(null);
+
   const { data: genome, isLoading: genomeLoading, error: genomeError } = useGenome();
   const { data: darkMatter, isLoading: dmLoading } = useDarkMatter();
   const { data: infections, isLoading: infLoading } = useInfections();
   const { data: metabolic, isLoading: metLoading } = useMetabolic();
   const { data: cognitiveLoad, isLoading: clLoading } = useCognitiveLoad();
+
+  const curCount = infections?.length ?? 0;
+  if (prevInfectionCount.current !== null && curCount !== prevInfectionCount.current && curCount > 0) {
+    const diff = curCount - prevInfectionCount.current;
+    if (diff > 0) {
+      addToast(`${diff} new infection${diff > 1 ? 's' : ''} detected`, 'error');
+    } else {
+      addToast(`${Math.abs(diff)} infection${Math.abs(diff) > 1 ? 's' : ''} resolved`, 'success');
+    }
+  }
+  prevInfectionCount.current = curCount;
 
   const analyzeGenome = useAnalyzeGenome();
   const analyzeDM = useAnalyzeDarkMatter();
