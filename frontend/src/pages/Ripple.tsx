@@ -1,19 +1,39 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useSimulateRipple } from '../hooks/useRipple';
+import { useGenome } from '../hooks/useGenome';
+import { useMetabolic } from '../hooks/useMetabolic';
 import AlertBanner from '../components/AlertBanner';
 import type { RippleResult } from '../api/ripple';
+
+const BASELINE_METRICS = ['collaboration', 'decision_making', 'knowledge_flow', 'innovation', 'resilience', 'vitality', 'cognitive_load', 'dark_matter_cost'];
 
 export default function Ripple() {
   const [description, setDescription] = useState('');
   const [target, setTarget] = useState('');
   const [intensity, setIntensity] = useState('medium');
   const simulate = useSimulateRipple();
+  const { data: genome } = useGenome();
+  const { data: metabolic } = useMetabolic();
+  const currentBaseline = useRef<Record<string, number> | null>(null);
 
   const result = simulate.data as RippleResult | undefined;
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!description.trim()) return;
+    currentBaseline.current = {
+      collaboration: genome?.collaboration ?? 0,
+      decision_making: genome?.decision_making ?? 0,
+      knowledge_flow: genome?.knowledge_flow ?? 0,
+      innovation: genome?.innovation ?? 0,
+      resilience: genome?.resilience ?? 0,
+      vitality: genome?.vitality ?? 0,
+      cognitive_load: 0,
+      dark_matter_cost: 0,
+      decision_cycle_time_hours: metabolic?.decision_cycle_time_hours ?? 0,
+      info_half_life_hours: metabolic?.info_half_life_hours ?? 0,
+      execution_velocity: metabolic?.execution_velocity ?? 0,
+    };
     simulate.mutate({
       change_description: description,
       target_team: target || undefined,
@@ -85,9 +105,52 @@ export default function Ripple() {
         <AlertBanner type="error">Simulation failed. Please try again.</AlertBanner>
       )}
 
-      {result && (
-        <div className="space-y-4">
-          <h2 className="text-lg font-semibold text-white">Predicted Ripple Effects</h2>
+      {result && currentBaseline.current && (
+        <div className="space-y-6">
+          <h2 className="text-lg font-semibold text-white">Before / After Comparison</h2>
+          <div className="neuron-card overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-gray-800">
+                  <th className="text-left py-2 px-3 text-gray-400 font-medium">Metric</th>
+                  <th className="text-right py-2 px-3 text-gray-400 font-medium">Current</th>
+                  <th className="text-right py-2 px-3 text-gray-400 font-medium">Predicted</th>
+                  <th className="text-right py-2 px-3 text-gray-400 font-medium">Change</th>
+                </tr>
+              </thead>
+              <tbody>
+                {Object.entries(result).map(([metric, effect]) => {
+                  const current = currentBaseline.current![metric] ?? 0;
+                  const predicted = effect.direction === 'positive'
+                    ? current + effect.magnitude * (1 - current)
+                    : effect.direction === 'negative'
+                    ? current - effect.magnitude * current
+                    : current;
+                  const diff = predicted - current;
+                  return (
+                    <tr key={metric} className="border-b border-gray-800/50">
+                      <td className="py-2 px-3 text-gray-300 capitalize">{metric.replace(/_/g, ' ')}</td>
+                      <td className={`py-2 px-3 text-right ${current > 0 ? 'text-gray-200' : 'text-gray-600'}`}>
+                        {metric.includes('_hours') || metric === 'dark_matter_cost'
+                          ? (current).toFixed(1)
+                          : `${Math.round(current * 100)}%`}
+                      </td>
+                      <td className={`py-2 px-3 text-right ${predicted > 0 ? 'text-gray-200' : 'text-gray-600'}`}>
+                        {metric.includes('_hours') || metric === 'dark_matter_cost'
+                          ? (predicted).toFixed(1)
+                          : `${Math.round(predicted * 100)}%`}
+                      </td>
+                      <td className={`py-2 px-3 text-right font-medium ${diff > 0 ? 'text-emerald-400' : diff < 0 ? 'text-red-400' : 'text-gray-500'}`}>
+                        {diff > 0 ? '+' : ''}{(diff * 100).toFixed(0)}%
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+
+          <h2 className="text-lg font-semibold text-white">Ripple Details</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {Object.entries(result).map(([metric, effect]) => (
               <div key={metric} className="neuron-card">

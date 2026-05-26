@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useSnapshots, useTakeSnapshot, useCompare } from '../hooks/useFossil';
+import TimelineSlider from '../components/TimelineSlider';
 import AlertBanner from '../components/AlertBanner';
 import LoadingSkeleton from '../components/LoadingSkeleton';
 import { useToast } from '../components/Toast';
@@ -19,6 +20,12 @@ export default function FossilRecord() {
       onError: () => addToast('Failed to take snapshot', 'error'),
     });
   };
+
+  const snaps = snapshots || [];
+  const sliderSnapshots = snaps.map((s, i) => ({
+    ...s,
+    index: snaps.length - 1 - i,
+  })).reverse();
 
   return (
     <div className="space-y-8">
@@ -41,38 +48,16 @@ export default function FossilRecord() {
       ) : snapshots && snapshots.length > 0 ? (
         <>
           <div className="neuron-card">
-            <h2 className="text-sm font-semibold text-gray-400 mb-4">Timeline</h2>
-            <div className="space-y-3">
-              {snapshots.map((s, i) => (
-                <div key={s.id} className="flex items-center gap-4 p-3 rounded-lg bg-gray-800/50 border border-gray-700/50">
-                  <div className="w-8 h-8 rounded-full bg-neuron-500/20 text-neuron-400 flex items-center justify-center text-sm font-bold">
-                    {snapshots.length - i}
-                  </div>
-                  <div className="flex-1">
-                    <div className="text-sm text-white font-medium">Snapshot {snapshots.length - i}</div>
-                    <div className="text-xs text-gray-500">{s.snapshot_date}</div>
-                  </div>
-                  <div className="flex gap-2">
-                    <button
-                      onClick={() => setBeforeId(s.id)}
-                      className={`px-3 py-1.5 text-xs rounded-lg border transition-colors ${
-                        beforeId === s.id ? 'bg-neuron-500 border-neuron-500 text-white' : 'border-gray-700 text-gray-400 hover:border-gray-500'
-                      }`}
-                    >
-                      Before
-                    </button>
-                    <button
-                      onClick={() => setAfterId(s.id)}
-                      className={`px-3 py-1.5 text-xs rounded-lg border transition-colors ${
-                        afterId === s.id ? 'bg-neuron-500 border-neuron-500 text-white' : 'border-gray-700 text-gray-400 hover:border-gray-500'
-                      }`}
-                    >
-                      After
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
+            <h2 className="text-sm font-semibold text-gray-400 mb-4">
+              Timeline — click dot to set <span className="text-amber-400">Before</span>, click another for <span className="text-purple-400">After</span>
+            </h2>
+            <TimelineSlider
+              snapshots={sliderSnapshots}
+              selectedBefore={beforeId}
+              selectedAfter={afterId}
+              onSelectBefore={setBeforeId}
+              onSelectAfter={setAfterId}
+            />
           </div>
 
           {comparison && (
