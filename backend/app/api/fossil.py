@@ -1,12 +1,14 @@
 from datetime import date
 
 from fastapi import APIRouter, Depends, HTTPException
+from fastapi.responses import Response
 from sqlalchemy import select, desc
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database.session import get_db
 from app.database.models import Organization, FossilSnapshot
 from app.agents.fossil import create_snapshot
+from app.utils.export import csv_response, pdf_response
 
 router = APIRouter()
 
@@ -30,12 +32,16 @@ async def take_snapshot(org_id: str, db: AsyncSession = Depends(get_db)):
 
 
 @router.get("/fossil/snapshots")
-async def list_snapshots(org_id: str, db: AsyncSession = Depends(get_db)):
-    result = await db.execute(
-        select(FossilSnapshot)
-        .where(FossilSnapshot.organization_id == org_id)
-        .order_by(desc(FossilSnapshot.snapshot_date))
-    )
+async def list_snapshots(
+    org_id: str,
+    limit: int = 0,
+    offset: int = 0,
+    db: AsyncSession = Depends(get_db),
+):
+    q = select(FossilSnapshot).where(FossilSnapshot.organization_id == org_id).order_by(desc(FossilSnapshot.snapshot_date))
+    if limit > 0:
+        q = q.offset(offset).limit(limit)
+    result = await db.execute(q)
     snapshots = result.scalars().all()
     return [
         {"id": s.id, "snapshot_date": str(s.snapshot_date), "created_at": str(s.created_at)}
@@ -84,3 +90,48 @@ async def compare_snapshots(org_id: str, before_id: str, after_id: str, db: Asyn
         "after": {"snapshot_date": str(after.snapshot_date), "state": a_state},
         "delta": delta,
     }
+
+
+@router.get("/fossil/export/csv")
+async def export_fossil_csv(org_id: str, db: AsyncSession = Depends(get_db)):
+    result = await db.execute(
+        select(FossilSnapshot)
+        .where(FossilSnapshot.organization_id == org_id)
+        .order_by(desc(FossilSnapshot.snapshot_date))
+    )
+    snapshots = result.scalars().all()
+    rows = []
+    for s in snapshots:
+        state = s.state or {}
+        row = {"snapshot_date": str(s.snapshot_date)}
+        for section in ("genome", "dark_matter", "metabolic", "cognitive_load"):
+            for k, v in (state.get(section) or {}).items():
+                row[f"{section}_{k}"] = v
+        rows.append(row)
+    return csv_response(rows, "fossil_snapshots.csv")
+
+
+@router.get("/fossil/export/pdf")
+async def export_fossil_pdf(org_id: str, before_id: str, after_id: str, db: AsyncSession = Depends(get_db)):
+    before = (await db.execute(select(FossilSnapshot).where(FossilSnapshot.id == before_id))).scalar_one_or_none()
+    after = (await db.execute(select(FossilSnapshot).where(FossilSnapshot.id == after_id))).scalar_one_or_none()
+    if not before or not after:
+        raise HTTPException(status_code=404, detail="Snapshot not found")
+
+    b_state = before.state or {}
+    a_state = after.state or {}
+
+    def _flatten(data: dict, prefix: str) -> list[tuple[str, str]]:
+        items = []
+        for k, v in (data.get(prefix) or {}).items():
+            items.append((k.replace("_", " ").title(), str(v)))
+        return items
+
+    sections = [
+        (f"Before ({before.snapshot_date})", _flatten(b_state, "genome") + _flatten(b_state, "metabolic")),
+        (f"After ({after.snapshot_date})", _flatten(a_state, "genome") + _flatten(a_state, "metabolic")),
+    ]
+
+    buf = pdf_response("Fossil Record Comparison Report", sections)
+    return Response(content=buf, media_type="application/pdf",
+                    headers={"Content-Disposition": "attachment; filename=fossil_comparison.pdf"})

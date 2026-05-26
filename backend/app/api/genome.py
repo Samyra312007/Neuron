@@ -2,6 +2,7 @@ from datetime import date, timedelta
 from decimal import Decimal
 
 from fastapi import APIRouter, Depends, HTTPException
+from fastapi.responses import Response
 from sqlalchemy import select, desc
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -9,6 +10,7 @@ from app.database.session import get_db
 from app.database.models import Organization, GenomeSequence
 from app.agents import genotyper
 from app.schemas.genome import GenomeOut
+from app.utils.export import csv_response, pdf_response
 
 router = APIRouter()
 
@@ -57,11 +59,70 @@ async def analyze_genome(org_id: str, db: AsyncSession = Depends(get_db)):
 
 
 @router.get("/genome/history")
-async def get_genome_history(org_id: str, db: AsyncSession = Depends(get_db)):
+async def get_genome_history(
+    org_id: str,
+    limit: int = 0,
+    offset: int = 0,
+    db: AsyncSession = Depends(get_db),
+):
+    q = select(GenomeSequence).where(GenomeSequence.organization_id == org_id).order_by(desc(GenomeSequence.week_start))
+    if limit > 0:
+        q = q.offset(offset).limit(limit)
+    result = await db.execute(q)
+    genomes = result.scalars().all()
+    return genomes
+
+
+@router.get("/genome/export/csv")
+async def export_genome_csv(org_id: str, db: AsyncSession = Depends(get_db)):
     result = await db.execute(
         select(GenomeSequence)
         .where(GenomeSequence.organization_id == org_id)
         .order_by(desc(GenomeSequence.week_start))
     )
     genomes = result.scalars().all()
-    return genomes
+    rows = [
+        {
+            "week_start": g.week_start,
+            "collaboration": g.collaboration,
+            "decision_making": g.decision_making,
+            "knowledge_flow": g.knowledge_flow,
+            "innovation": g.innovation,
+            "resilience": g.resilience,
+            "vitality": g.vitality,
+            "health_score": g.health_score,
+        }
+        for g in genomes
+    ]
+    return csv_response(rows, "genome_history.csv")
+
+
+@router.get("/genome/export/pdf")
+async def export_genome_pdf(org_id: str, db: AsyncSession = Depends(get_db)):
+    result = await db.execute(
+        select(GenomeSequence)
+        .where(GenomeSequence.organization_id == org_id)
+        .order_by(desc(GenomeSequence.week_start))
+        .limit(1)
+    )
+    g = result.scalar_one_or_none()
+    if not g:
+        raise HTTPException(status_code=404, detail="No genome data")
+
+    sections = [
+        ("DNA Sequences", [
+            ("Collaboration", f"{g.collaboration*100:.0f}%"),
+            ("Decision Making", f"{g.decision_making*100:.0f}%"),
+            ("Knowledge Flow", f"{g.knowledge_flow*100:.0f}%"),
+            ("Innovation", f"{g.innovation*100:.0f}%"),
+            ("Resilience", f"{g.resilience*100:.0f}%"),
+            ("Vitality", f"{g.vitality*100:.0f}%"),
+            ("Health Score", f"{g.health_score*100:.0f}%"),
+        ]),
+    ]
+    if g.summary:
+        sections.append(("Summary", [("", g.summary)]))
+
+    buf = pdf_response("Genome Lab Report", sections)
+    return Response(content=buf, media_type="application/pdf",
+                    headers={"Content-Disposition": "attachment; filename=genome_report.pdf"})

@@ -1,4 +1,4 @@
-import { api } from './client';
+import { api, getDownloadUrl } from './client';
 import type { GenomeSequence } from '../types';
 
 export function fetchGenome() {
@@ -11,4 +11,12 @@ export function fetchGenomeHistory() {
 
 export function analyzeGenome() {
   return api.post<GenomeSequence>('/genome/analyze');
+}
+
+export function getGenomeCsvUrl() {
+  return getDownloadUrl('/genome/export/csv');
+}
+
+export function getGenomePdfUrl() {
+  return getDownloadUrl('/genome/export/pdf');
 }

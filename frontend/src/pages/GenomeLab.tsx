@@ -1,5 +1,8 @@
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { useGenome, useGenomeHistory, useAnalyzeGenome } from '../hooks/useGenome';
+import { getGenomeCsvUrl, getGenomePdfUrl } from '../api/genome';
+import { useTeamFilter } from '../hooks/useTeamFilter';
+import TeamFilter from '../components/TeamFilter';
 import DNAHelix from '../components/DNAHelix';
 import HealthGauge from '../components/HealthGauge';
 import AlertBanner from '../components/AlertBanner';
@@ -28,7 +31,14 @@ export default function GenomeLab() {
   const { data: genome, isLoading, error } = useGenome();
   const { data: history } = useGenomeHistory();
   const analyze = useAnalyzeGenome();
+  const { teamId, setTeamId } = useTeamFilter();
   const [compareIdx, setCompareIdx] = useState<number>(-1);
+  const [historyLimit, setHistoryLimit] = useState(10);
+
+  const download = useCallback(async (fn: () => Promise<string>) => {
+    const url = await fn();
+    window.open(url, '_blank');
+  }, []);
 
   const genes = genome ? Object.entries(GENE_LABELS).map(([key, label]) => ({
     label,
@@ -55,13 +65,22 @@ export default function GenomeLab() {
           <h1 className="text-2xl font-bold text-white">Genome Lab</h1>
           <p className="text-gray-400 mt-1">Organizational DNA Sequencing</p>
         </div>
-        <button
-          onClick={() => analyze.mutate()}
-          disabled={analyze.isPending}
-          className="py-2 px-5 bg-neuron-500 hover:bg-neuron-600 disabled:opacity-50 text-white rounded-lg font-medium text-sm transition-colors"
-        >
-          {analyze.isPending ? 'Sequencing...' : 'Sequence Genome'}
-        </button>
+        <div className="flex items-center gap-2">
+          <TeamFilter value={teamId} onChange={setTeamId} />
+          {genome && (
+            <>
+              <button onClick={() => download(getGenomeCsvUrl)} className="py-2 px-3 bg-gray-700 hover:bg-gray-600 text-gray-200 rounded-lg text-xs transition-colors">CSV</button>
+              <button onClick={() => download(getGenomePdfUrl)} className="py-2 px-3 bg-gray-700 hover:bg-gray-600 text-gray-200 rounded-lg text-xs transition-colors">PDF</button>
+            </>
+          )}
+          <button
+            onClick={() => analyze.mutate()}
+            disabled={analyze.isPending}
+            className="py-2 px-5 bg-neuron-500 hover:bg-neuron-600 disabled:opacity-50 text-white rounded-lg font-medium text-sm transition-colors"
+          >
+            {analyze.isPending ? 'Sequencing...' : 'Sequence Genome'}
+          </button>
+        </div>
       </div>
 
       {error && (
@@ -82,16 +101,21 @@ export default function GenomeLab() {
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-sm font-semibold text-gray-400 uppercase tracking-wider">DNA Helix</h2>
                 {history && history.length > 1 && (
-                  <select
-                    value={compareIdx}
-                    onChange={(e) => setCompareIdx(Number(e.target.value))}
-                    className="bg-gray-800 border border-gray-700 rounded-lg px-3 py-1.5 text-xs text-gray-300 focus:outline-none focus:border-neuron-500"
-                  >
-                    <option value={-1}>No comparison</option>
-                    {history.slice(1).map((h, i) => (
-                      <option key={h.id} value={i}>vs {h.week_start}</option>
-                    ))}
-                  </select>
+                  <div className="flex items-center gap-2">
+                    <select
+                      value={compareIdx}
+                      onChange={(e) => setCompareIdx(Number(e.target.value))}
+                      className="bg-gray-800 border border-gray-700 rounded-lg px-3 py-1.5 text-xs text-gray-300 focus:outline-none focus:border-neuron-500"
+                    >
+                      <option value={-1}>No comparison</option>
+                      {history.slice(1, historyLimit).map((h, i) => (
+                        <option key={h.id} value={i}>vs {h.week_start}</option>
+                      ))}
+                    </select>
+                    {history.length >= historyLimit && (
+                      <button onClick={() => setHistoryLimit(historyLimit + 10)} className="text-xs text-neuron-400 hover:text-neuron-300">Load More</button>
+                    )}
+                  </div>
                 )}
               </div>
               <DNAHelix genes={genes} previousGenes={previousGenes} />

@@ -1,0 +1,11 @@
+import { useQuery } from '@tanstack/react-query';
+import { fetchTeams } from '../api/teams';
+
+export function useTeams() {
+  return useQuery({
+    queryKey: ['teams'],
+    queryFn: fetchTeams,
+    retry: 1,
+    staleTime: 120_000,
+  });
+}

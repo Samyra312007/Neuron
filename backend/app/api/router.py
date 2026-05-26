@@ -9,6 +9,7 @@ from app.database.models import Organization, GenomeSequence, DarkMatterReport, 
 from app.agents import genotyper, dark_scanner, immune
 from app.agents.metabolic import metabolic
 from app.agents.cognitive_load import cognitive_load
+from app.utils.activity import record_event
 from app.api.health import router as health_router
 from app.api.genome import router as genome_router
 from app.api.dark_matter import router as dark_matter_router
@@ -18,6 +19,20 @@ from app.api.metabolic import router as metabolic_router
 from app.api.cognitive_load import router as cognitive_load_router
 from app.api.ripple import router as ripple_router
 from app.api.fossil import router as fossil_router
+from app.api.activity import router as activity_router
+from app.api.settings import router as settings_router
+from app.api.alerts import router as alerts_router
+from app.api.benchmarks import router as benchmarks_router
+from app.api.export_all import router as export_all_router
+from app.api.crisis import router as crisis_router
+from app.api.sentiment import router as sentiment_router
+from app.api.vulnerability import router as vulnerability_router
+from app.api.decisions import router as decisions_router
+from app.api.notifications import router as notifications_router
+from app.api.email_reports import router as email_reports_router
+from app.api.github_connector import router as github_connector_router
+from app.api.auth import router as auth_router
+from app.api.data_io import router as data_io_router
 
 router = APIRouter()
 
@@ -30,6 +45,20 @@ router.include_router(metabolic_router)
 router.include_router(cognitive_load_router)
 router.include_router(ripple_router)
 router.include_router(fossil_router)
+router.include_router(activity_router)
+router.include_router(settings_router)
+router.include_router(alerts_router)
+router.include_router(benchmarks_router)
+router.include_router(export_all_router)
+router.include_router(crisis_router)
+router.include_router(sentiment_router)
+router.include_router(vulnerability_router)
+router.include_router(decisions_router)
+router.include_router(notifications_router)
+router.include_router(email_reports_router)
+router.include_router(github_connector_router)
+router.include_router(auth_router)
+router.include_router(data_io_router)
 
 
 @router.get("/")
@@ -63,6 +92,9 @@ async def run_all_agents(org_id: str, db: AsyncSession = Depends(get_db)):
         db.add(genome)
         await db.flush()
         results["genome"] = {"health_score": genome.health_score}
+        await record_event(db, org_id, "genome_sequenced", "genotyper",
+                           f"Genome sequenced — health score {genome.health_score*100:.0f}%",
+                           severity="info", related_entity_type="genome", related_entity_id=str(genome.id))
     else:
         results["genome"] = {"error": genome_data["error"]}
 
@@ -87,6 +119,9 @@ async def run_all_agents(org_id: str, db: AsyncSession = Depends(get_db)):
         db.add(report)
         await db.flush()
         results["dark_matter"] = {"total_cost": str(report.total_cost)}
+        await record_event(db, org_id, "dark_matter_scanned", "dark_scanner",
+                           f"Dark matter scan complete — ${report.total_cost} invisible cost detected",
+                           severity="warning", related_entity_type="dark_matter", related_entity_id=str(report.id))
     else:
         results["dark_matter"] = {"error": dm_data["error"]}
 
@@ -108,6 +143,10 @@ async def run_all_agents(org_id: str, db: AsyncSession = Depends(get_db)):
             count += 1
         await db.flush()
         results["immune"] = {"active_infections": count}
+        await record_event(db, org_id, "infections_scanned", "immune",
+                           f"Immune scan found {count} active infection(s)",
+                           severity="critical" if count > 2 else "warning",
+                           related_entity_type="immune")
     else:
         results["immune"] = {"error": immune_data["error"]}
 
@@ -124,6 +163,9 @@ async def run_all_agents(org_id: str, db: AsyncSession = Depends(get_db)):
         db.add(metric)
         await db.flush()
         results["metabolic"] = {"composite_score": metric.composite_score}
+        await record_event(db, org_id, "metabolic_analyzed", "metabolic",
+                           f"Metabolic rate analyzed — composite score {metric.composite_score:.2f}",
+                           severity="info", related_entity_type="metabolic", related_entity_id=str(metric.id))
     else:
         results["metabolic"] = {"error": metabolic_data["error"]}
 
@@ -144,6 +186,9 @@ async def run_all_agents(org_id: str, db: AsyncSession = Depends(get_db)):
         db.add(metric)
         await db.flush()
         results["cognitive_load"] = {"composite_score": metric.composite_score}
+        await record_event(db, org_id, "cognitive_load_analyzed", "cognitive_load",
+                           f"Cognitive load analyzed — composite score {metric.composite_score:.2f}",
+                           severity="info", related_entity_type="cognitive_load", related_entity_id=str(metric.id))
     else:
         results["cognitive_load"] = {"error": cognitive_data["error"]}
 

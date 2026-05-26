@@ -1,4 +1,8 @@
+fpdf2==2.7.9
 fastapi==0.115.0
+passlib[bcrypt]==1.7.4
+pyjwt==2.9.0
+bcrypt==4.0.1
 uvicorn[standard]==0.30.6
 sqlalchemy[asyncio]==2.0.35
 asyncpg==0.29.0

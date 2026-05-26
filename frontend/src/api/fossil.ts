@@ -1,4 +1,4 @@
-import { api } from './client';
+import { api, getDownloadUrl } from './client';
 
 export interface SnapshotSummary {
   id: string;
@@ -32,4 +32,12 @@ export function getSnapshot(id: string) {
 
 export function compareSnapshots(beforeId: string, afterId: string) {
   return api.get<CompareResult>(`/fossil/compare?before_id=${beforeId}&after_id=${afterId}`);
+}
+
+export function getFossilCsvUrl() {
+  return getDownloadUrl('/fossil/export/csv');
+}
+
+export function getFossilPdfUrl(beforeId: string, afterId: string) {
+  return getDownloadUrl(`/fossil/export/pdf?before_id=${beforeId}&after_id=${afterId}`);
 }

@@ -1,4 +1,6 @@
 import { useInfections, useAnalyzeInfections, useTreatInfection } from '../hooks/useImmune';
+import { useTeamFilter } from '../hooks/useTeamFilter';
+import TeamFilter from '../components/TeamFilter';
 import InfectionCard from '../components/InfectionCard';
 import SpreadBubble from '../components/SpreadBubble';
 import AlertBanner from '../components/AlertBanner';
@@ -14,6 +16,7 @@ export default function ImmuneCenter() {
   const { data: infections, isLoading, error } = useInfections();
   const analyze = useAnalyzeInfections();
   const treat = useTreatInfection();
+  const { teamId, setTeamId } = useTeamFilter();
 
   const bubbleData = (infections || []).map((inf) => ({
     id: inf.id,
@@ -30,13 +33,16 @@ export default function ImmuneCenter() {
           <h1 className="text-2xl font-bold text-white">Immune Center</h1>
           <p className="text-gray-400 mt-1">Organizational infection detection & treatment</p>
         </div>
-        <button
-          onClick={() => analyze.mutate()}
-          disabled={analyze.isPending}
-          className="py-2 px-5 bg-neuron-500 hover:bg-neuron-600 disabled:opacity-50 text-white rounded-lg font-medium text-sm transition-colors"
-        >
-          {analyze.isPending ? 'Scanning...' : 'Scan for Infections'}
-        </button>
+        <div className="flex items-center gap-2">
+          <TeamFilter value={teamId} onChange={setTeamId} />
+          <button
+            onClick={() => analyze.mutate()}
+            disabled={analyze.isPending}
+            className="py-2 px-5 bg-neuron-500 hover:bg-neuron-600 disabled:opacity-50 text-white rounded-lg font-medium text-sm transition-colors"
+          >
+            {analyze.isPending ? 'Scanning...' : 'Scan for Infections'}
+          </button>
+        </div>
       </div>
 
       {error && (

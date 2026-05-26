@@ -2,7 +2,7 @@ import uuid
 from datetime import datetime, date
 from decimal import Decimal
 
-from sqlalchemy import String, Integer, Float, DateTime, Date, Text, ForeignKey, Enum as SAEnum, JSON, Numeric
+from sqlalchemy import String, Integer, Float, DateTime, Date, Text, ForeignKey, Enum as SAEnum, JSON, Numeric, Boolean
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.sql import func
@@ -35,6 +35,11 @@ class Organization(Base):
     cognitive_load_metrics: Mapped[list["CognitiveLoadMetric"]] = relationship("CognitiveLoadMetric", back_populates="organization", cascade="all, delete-orphan")
     immune_infections: Mapped[list["ImmuneInfection"]] = relationship("ImmuneInfection", back_populates="organization", cascade="all, delete-orphan")
     fossil_snapshots: Mapped[list["FossilSnapshot"]] = relationship("FossilSnapshot", back_populates="organization", cascade="all, delete-orphan")
+    activity_events: Mapped[list["ActivityEvent"]] = relationship("ActivityEvent", back_populates="organization", cascade="all, delete-orphan")
+    alert_configs: Mapped[list["AlertConfiguration"]] = relationship("AlertConfiguration", back_populates="organization", cascade="all, delete-orphan")
+    alert_history: Mapped[list["AlertHistory"]] = relationship("AlertHistory", back_populates="organization", cascade="all, delete-orphan")
+    settings: Mapped[list["OrganizationSetting"]] = relationship("OrganizationSetting", back_populates="organization", cascade="all, delete-orphan")
+    decision_records: Mapped[list["DecisionRecord"]] = relationship("DecisionRecord", back_populates="organization", cascade="all, delete-orphan")
 
 
 class Team(Base):
@@ -234,3 +239,137 @@ class FossilSnapshot(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
     organization: Mapped["Organization"] = relationship("Organization", back_populates="fossil_snapshots")
+
+
+# ─────────────────────────────────────────────
+# ACTIVITY FEED
+# ─────────────────────────────────────────────
+
+class ActivityEvent(Base):
+    __tablename__ = "activity_events"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=gen_uuid)
+    organization_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("organizations.id"), nullable=False)
+    event_type: Mapped[str] = mapped_column(String(50), nullable=False, index=True)
+    source: Mapped[str] = mapped_column(String(50), nullable=False)
+    description: Mapped[str] = mapped_column(Text, nullable=False)
+    related_entity_type: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    related_entity_id: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    severity: Mapped[str] = mapped_column(String(20), default="info")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+    organization: Mapped["Organization"] = relationship("Organization", back_populates="activity_events")
+
+
+# ─────────────────────────────────────────────
+# ALERTS
+# ─────────────────────────────────────────────
+
+class AlertConfiguration(Base):
+    __tablename__ = "alert_configurations"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=gen_uuid)
+    organization_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("organizations.id"), nullable=False)
+    metric_name: Mapped[str] = mapped_column(String(100), nullable=False)
+    comparison_operator: Mapped[str] = mapped_column(String(20), nullable=False)
+    threshold_value: Mapped[float] = mapped_column(Float, nullable=False)
+    label: Mapped[str] = mapped_column(String(200), nullable=False)
+    enabled: Mapped[bool] = mapped_column(Boolean, default=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+    organization: Mapped["Organization"] = relationship("Organization", back_populates="alert_configs")
+
+
+class AlertHistory(Base):
+    __tablename__ = "alert_history"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=gen_uuid)
+    organization_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("organizations.id"), nullable=False)
+    alert_config_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("alert_configurations.id"), nullable=False)
+    metric_value: Mapped[float] = mapped_column(Float, nullable=False)
+    threshold_value: Mapped[float] = mapped_column(Float, nullable=False)
+    resolved_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    triggered_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+    organization: Mapped["Organization"] = relationship("Organization", back_populates="alert_history")
+
+
+# ─────────────────────────────────────────────
+# ORGANIZATION SETTINGS
+# ─────────────────────────────────────────────
+
+class OrganizationSetting(Base):
+    __tablename__ = "organization_settings"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=gen_uuid)
+    organization_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("organizations.id"), nullable=False)
+    key: Mapped[str] = mapped_column(String(100), nullable=False)
+    value: Mapped[str] = mapped_column(Text, nullable=False)
+
+    organization: Mapped["Organization"] = relationship("Organization", back_populates="settings")
+
+
+# ─────────────────────────────────────────────
+# CRISIS PATTERNS
+# ─────────────────────────────────────────────
+
+class CrisisPattern(Base):
+    __tablename__ = "crisis_patterns"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=gen_uuid)
+    organization_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("organizations.id"), nullable=False)
+    name: Mapped[str] = mapped_column(String(200), nullable=False)
+    description: Mapped[str] = mapped_column(Text, nullable=False)
+    pattern_data: Mapped[dict] = mapped_column(JSON, nullable=False)
+    severity: Mapped[str] = mapped_column(String(20), default="medium")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class CrisisMatch(Base):
+    __tablename__ = "crisis_matches"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=gen_uuid)
+    organization_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("organizations.id"), nullable=False)
+    pattern_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("crisis_patterns.id"), nullable=False)
+    snapshot_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("fossil_snapshots.id"), nullable=False)
+    match_score: Mapped[float] = mapped_column(Float, nullable=False)
+    details: Mapped[dict] = mapped_column(JSON, default=dict)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+# ─────────────────────────────────────────────
+# DECISION ARCHAEOLOGY
+# ─────────────────────────────────────────────
+
+class DecisionRecord(Base):
+    __tablename__ = "decision_records"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=gen_uuid)
+    organization_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("organizations.id"), nullable=False)
+    title: Mapped[str] = mapped_column(String(255), nullable=False)
+    description: Mapped[str] = mapped_column(Text, default="")
+    status: Mapped[str] = mapped_column(String(50), default="proposed")
+    initiator_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("persons.id"), nullable=True)
+    initiator_name: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    decided_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    reverted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+    organization: Mapped["Organization"] = relationship("Organization", back_populates="decision_records")
+
+
+# ─────────────────────────────────────────────
+# USER / AUTH
+# ─────────────────────────────────────────────
+
+class User(Base):
+    __tablename__ = "users"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=gen_uuid)
+    organization_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("organizations.id"), nullable=False)
+    email: Mapped[str] = mapped_column(String(255), unique=True, nullable=False, index=True)
+    password_hash: Mapped[str] = mapped_column(String(255), nullable=False)
+    name: Mapped[str] = mapped_column(String(255), nullable=False)
+    role: Mapped[str] = mapped_column(String(50), default="member")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())

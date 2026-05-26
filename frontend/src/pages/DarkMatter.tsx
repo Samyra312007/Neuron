@@ -1,5 +1,8 @@
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { useDarkMatter, useAnalyzeDarkMatter } from '../hooks/useDarkMatter';
+import { getDarkMatterCsvUrl, getDarkMatterPdfUrl } from '../api/darkMatter';
+import { useTeamFilter } from '../hooks/useTeamFilter';
+import TeamFilter from '../components/TeamFilter';
 import MetricCard from '../components/MetricCard';
 import DarkMatterTreemap from '../components/DarkMatterTreemap';
 import AlertBanner from '../components/AlertBanner';
@@ -18,7 +21,13 @@ const CATEGORIES = [
 export default function DarkMatter() {
   const { data: report, isLoading, error } = useDarkMatter();
   const analyze = useAnalyzeDarkMatter();
+  const { teamId, setTeamId } = useTeamFilter();
   const [selected, setSelected] = useState<TreemapItem | null>(null);
+
+  const download = useCallback(async (fn: () => Promise<string>) => {
+    const url = await fn();
+    window.open(url, '_blank');
+  }, []);
 
   const treemapData = report ? CATEGORIES.map(({ key, label, costKey, color }) => ({
     name: key,
@@ -35,13 +44,22 @@ export default function DarkMatter() {
           <h1 className="text-2xl font-bold text-white">Dark Matter Detector</h1>
           <p className="text-gray-400 mt-1">Invisible work & unmeasured organizational cost</p>
         </div>
-        <button
-          onClick={() => analyze.mutate()}
-          disabled={analyze.isPending}
-          className="py-2 px-5 bg-neuron-500 hover:bg-neuron-600 disabled:opacity-50 text-white rounded-lg font-medium text-sm transition-colors"
-        >
-          {analyze.isPending ? 'Scanning...' : 'Scan Dark Matter'}
-        </button>
+        <div className="flex items-center gap-2">
+          <TeamFilter value={teamId} onChange={setTeamId} />
+          {report && (
+            <>
+              <button onClick={() => download(getDarkMatterCsvUrl)} className="py-2 px-3 bg-gray-700 hover:bg-gray-600 text-gray-200 rounded-lg text-xs transition-colors">CSV</button>
+              <button onClick={() => download(getDarkMatterPdfUrl)} className="py-2 px-3 bg-gray-700 hover:bg-gray-600 text-gray-200 rounded-lg text-xs transition-colors">PDF</button>
+            </>
+          )}
+          <button
+            onClick={() => analyze.mutate()}
+            disabled={analyze.isPending}
+            className="py-2 px-5 bg-neuron-500 hover:bg-neuron-600 disabled:opacity-50 text-white rounded-lg font-medium text-sm transition-colors"
+          >
+            {analyze.isPending ? 'Scanning...' : 'Scan Dark Matter'}
+          </button>
+        </div>
       </div>
 
       {error && (

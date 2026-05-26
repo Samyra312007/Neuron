@@ -4,11 +4,18 @@ import { useDarkMatter, useAnalyzeDarkMatter } from '../hooks/useDarkMatter';
 import { useInfections, useAnalyzeInfections } from '../hooks/useImmune';
 import { useMetabolic, useAnalyzeMetabolic } from '../hooks/useMetabolic';
 import { useCognitiveLoad, useAnalyzeCognitiveLoad } from '../hooks/useCognitiveLoad';
+import { useActivity } from '../hooks/useActivity';
+import { useBenchmarks } from '../hooks/useBenchmarks';
+import { useSentiment } from '../hooks/useSentiment';
+import { useVulnerabilities } from '../hooks/useVulnerability';
+import { useTeamFilter } from '../hooks/useTeamFilter';
 import { usePolling } from '../hooks/usePolling';
+import { getExportAllPdfUrl } from '../api/exportAll';
 import { useToast } from '../components/Toast';
 import { useQueryClient } from '@tanstack/react-query';
 import HealthGauge from '../components/HealthGauge';
 import MetricCard from '../components/MetricCard';
+import TeamFilter from '../components/TeamFilter';
 import AlertBanner from '../components/AlertBanner';
 import LoadingSkeleton from '../components/LoadingSkeleton';
 import { formatCurrency } from '../lib/utils';
@@ -23,6 +30,11 @@ export default function Dashboard() {
   const { data: infections, isLoading: infLoading } = useInfections();
   const { data: metabolic, isLoading: metLoading } = useMetabolic();
   const { data: cognitiveLoad, isLoading: clLoading } = useCognitiveLoad();
+  const { data: activityFeed } = useActivity(10);
+  const { teamId, setTeamId } = useTeamFilter();
+  const { data: benchmarks } = useBenchmarks();
+  const { data: sentiment } = useSentiment();
+  const { data: vuln } = useVulnerabilities();
 
   const curCount = infections?.length ?? 0;
   if (prevInfectionCount.current !== null && curCount !== prevInfectionCount.current && curCount > 0) {
@@ -61,6 +73,11 @@ export default function Dashboard() {
 
   const isRunning = analyzeGenome.isPending || analyzeDM.isPending || analyzeInf.isPending || analyzeMet.isPending || analyzeCL.isPending;
 
+  const handleExportAll = useCallback(async () => {
+    const url = await getExportAllPdfUrl();
+    window.open(url, '_blank');
+  }, []);
+
   return (
     <div className="space-y-8">
       <div className="flex items-center justify-between">
@@ -68,13 +85,17 @@ export default function Dashboard() {
           <h1 className="text-2xl font-bold text-white">Dashboard</h1>
           <p className="text-gray-400 mt-1">Organizational Health Overview</p>
         </div>
-        <button
-          onClick={handleRunAll}
-          disabled={isRunning}
-          className="py-2 px-5 bg-neuron-500 hover:bg-neuron-600 disabled:opacity-50 text-white rounded-lg font-medium text-sm transition-colors"
-        >
-          {isRunning ? 'Analyzing...' : 'Run All Agents'}
-        </button>
+        <div className="flex items-center gap-2">
+          <TeamFilter value={teamId} onChange={setTeamId} />
+          <button onClick={handleExportAll} className="py-2 px-3 bg-gray-700 hover:bg-gray-600 text-gray-200 rounded-lg text-xs transition-colors">Export All</button>
+          <button
+            onClick={handleRunAll}
+            disabled={isRunning}
+            className="py-2 px-5 bg-neuron-500 hover:bg-neuron-600 disabled:opacity-50 text-white rounded-lg font-medium text-sm transition-colors"
+          >
+            {isRunning ? 'Analyzing...' : 'Run All Agents'}
+          </button>
+        </div>
       </div>
 
       {genomeError && (
@@ -87,7 +108,7 @@ export default function Dashboard() {
         <LoadingSkeleton lines={6} />
       ) : (
         <>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             <div className="neuron-card flex items-center justify-center">
               <HealthGauge score={genome?.health_score ?? 0} />
             </div>
@@ -126,6 +147,20 @@ export default function Dashboard() {
               icon="🧠"
               color={cognitiveLoad?.composite_score && cognitiveLoad.composite_score > 0.6 ? '#ef4444' : '#8b5cf6'}
             />
+            <MetricCard
+              title="Sentiment"
+              value={sentiment ? sentiment.trend : 'N/A'}
+              subtitle={`Avg: ${sentiment?.avg_sentiment ?? 0}`}
+              icon="💬"
+              color={sentiment?.avg_sentiment && sentiment.avg_sentiment > 0 ? '#10b981' : '#ef4444'}
+            />
+            <MetricCard
+              title="Vulnerabilities"
+              value={vuln ? String(vuln.vulnerabilities.length) : '0'}
+              subtitle="Knowledge risks"
+              icon="⚠"
+              color={vuln?.vulnerabilities && vuln.vulnerabilities.length > 0 ? '#ef4444' : '#10b981'}
+            />
           </div>
 
           {genome?.summary && (
@@ -135,22 +170,76 @@ export default function Dashboard() {
             </div>
           )}
 
-          {infections && infections.length > 0 && (
+          {benchmarks && benchmarks.benchmarks.length > 0 && (
             <div className="neuron-card">
-              <h2 className="text-sm font-semibold text-gray-400 mb-3">Active Infections</h2>
-              <div className="space-y-2">
-                {infections.slice(0, 3).map((inf) => (
-                  <div key={inf.id} className="flex items-center gap-3 text-sm">
-                    <span className={`w-2 h-2 rounded-full ${
-                      inf.severity === 'high' ? 'bg-red-500' : inf.severity === 'medium' ? 'bg-yellow-500' : 'bg-green-500'
-                    }`} />
-                    <span className="text-gray-300">{inf.infection_type}</span>
-                    <span className="text-gray-500 ml-auto">{inf.severity}</span>
-                  </div>
-                ))}
+              <h2 className="text-sm font-semibold text-gray-400 mb-3">Industry Benchmark Comparison <span className="text-xs text-gray-600 font-normal">({benchmarks.industry_label})</span></h2>
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="text-left text-gray-500 border-b border-gray-800">
+                      <th className="pb-2 font-medium">Metric</th>
+                      <th className="pb-2 font-medium">Your Org</th>
+                      <th className="pb-2 font-medium">Industry Avg</th>
+                      <th className="pb-2 font-medium">Top Quartile</th>
+                      <th className="pb-2 font-medium">Gap</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {benchmarks.benchmarks.map((b, i) => (
+                      <tr key={i} className="border-b border-gray-800/50">
+                        <td className="py-2 text-gray-300">{b.metric}</td>
+                        <td className="py-2 text-white">{b.current}</td>
+                        <td className="py-2 text-gray-400">{b.industry_avg}</td>
+                        <td className="py-2 text-gray-400">{b.top_quartile}</td>
+                        <td className={`py-2 ${b.gap_vs_avg > 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                          {b.gap_vs_avg > 0 ? '+' : ''}{b.gap_vs_avg}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
             </div>
           )}
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {infections && infections.length > 0 && (
+              <div className="neuron-card">
+                <h2 className="text-sm font-semibold text-gray-400 mb-3">Active Infections</h2>
+                <div className="space-y-2">
+                  {infections.slice(0, 5).map((inf) => (
+                    <div key={inf.id} className="flex items-center gap-3 text-sm">
+                      <span className={`w-2 h-2 rounded-full ${
+                        inf.severity === 'high' ? 'bg-red-500' : inf.severity === 'medium' ? 'bg-yellow-500' : 'bg-green-500'
+                      }`} />
+                      <span className="text-gray-300">{inf.infection_type}</span>
+                      <span className="text-gray-500 ml-auto">{inf.severity}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {activityFeed && activityFeed.length > 0 && (
+              <div className="neuron-card">
+                <h2 className="text-sm font-semibold text-gray-400 mb-3">Activity Feed</h2>
+                <div className="space-y-2 max-h-64 overflow-y-auto">
+                  {activityFeed.map((ev) => (
+                    <div key={ev.id} className="flex items-start gap-2 text-xs">
+                      <span className={`mt-1 w-1.5 h-1.5 rounded-full shrink-0 ${
+                        ev.severity === 'critical' ? 'bg-red-500' :
+                        ev.severity === 'warning' ? 'bg-yellow-500' : 'bg-gray-500'
+                      }`} />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-gray-300 truncate">{ev.description}</p>
+                        <p className="text-gray-600">{ev.source} · {new Date(ev.created_at).toLocaleTimeString()}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
         </>
       )}
     </div>

@@ -1,6 +1,8 @@
-import { ReactNode, useState } from 'react';
+import { ReactNode, useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { cn } from '../lib/utils';
+import { useAuth } from '../contexts/AuthContext';
+import { api } from '../api/client';
 
 const NAV_ITEMS = [
   { path: '/', label: 'Dashboard', icon: '◉' },
@@ -11,11 +13,27 @@ const NAV_ITEMS = [
   { path: '/cognitive-load', label: 'Cognitive Load', icon: '🧠' },
   { path: '/ripple', label: 'Ripple Simulator', icon: '〰' },
   { path: '/fossil', label: 'Fossil Record', icon: '🪨' },
+  { path: '/activity', label: 'Activity', icon: '📡' },
+  { path: '/vulnerability', label: 'Vulnerability', icon: '⚠' },
+  { path: '/decisions', label: 'Decisions', icon: '📋' },
+  { path: '/settings', label: 'Settings', icon: '⚙' },
 ];
 
 export default function Layout({ children }: { children: ReactNode }) {
   const location = useLocation();
+  const { user, logout } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [dark, setDark] = useState(() => localStorage.getItem('neuron-dark') !== 'false');
+  const [orgs, setOrgs] = useState<{id: string; name: string}[]>([]);
+
+  useEffect(() => {
+    api.get<{id: string; name: string}[]>('/orgs').then(setOrgs).catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    localStorage.setItem('neuron-dark', String(dark));
+    document.documentElement.classList.toggle('dark', dark);
+  }, [dark]);
 
   return (
     <div className="flex h-screen overflow-hidden">
@@ -45,6 +63,19 @@ export default function Layout({ children }: { children: ReactNode }) {
               <p className="text-xs text-gray-500">Org Intelligence</p>
             </div>
           </Link>
+          {orgs.length > 1 && (
+            <select
+              value={user?.org_id || ''}
+              onChange={async (e) => {
+                const newOrgId = e.target.value;
+                localStorage.setItem('neuron-org-override', newOrgId);
+                window.location.reload();
+              }}
+              className="mt-2 w-full bg-gray-800 border border-gray-700 rounded px-2 py-1 text-xs text-gray-300"
+            >
+              {orgs.map((o) => <option key={o.id} value={o.id}>{o.name}</option>)}
+            </select>
+          )}
         </div>
 
         <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
@@ -71,8 +102,17 @@ export default function Layout({ children }: { children: ReactNode }) {
         </nav>
 
         <div className="p-4 border-t border-gray-800">
-          <div className="text-xs text-gray-600">NEURON v0.1.0</div>
-          <div className="text-xs text-gray-700">Hackathon Build</div>
+          <div className="flex items-center justify-between mb-1">
+            <div>
+              <div className="text-xs text-gray-600">NEURON v0.1.0</div>
+              <div className="text-xs text-gray-700">Hackathon Build</div>
+              {user && <div className="text-xs text-gray-500 mt-0.5">{user.name}</div>}
+            </div>
+            <div className="flex gap-1">
+              <button onClick={() => setDark(!dark)} className="text-xs px-2 py-1 rounded bg-gray-800 text-gray-400 hover:text-gray-200" title="Toggle theme">{dark ? '☀' : '☾'}</button>
+              {user && <button onClick={logout} className="text-xs px-2 py-1 rounded bg-gray-800 text-red-400 hover:text-red-300" title="Logout">✕</button>}
+            </div>
+          </div>
         </div>
       </aside>
 
