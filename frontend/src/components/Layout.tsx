@@ -104,9 +104,7 @@ export default function Layout({ children }: { children: ReactNode }) {
         <div className="p-4 border-t border-gray-800">
           <div className="flex items-center justify-between mb-1">
             <div>
-              <div className="text-xs text-gray-600">NEURON v0.1.0</div>
-              <div className="text-xs text-gray-700">Hackathon Build</div>
-              {user && <div className="text-xs text-gray-500 mt-0.5">{user.name}</div>}
+              {user && <div className="text-xs text-gray-500">{user.name}</div>}
             </div>
             <div className="flex gap-1">
               <button onClick={() => setDark(!dark)} className="text-xs px-2 py-1 rounded bg-gray-800 text-gray-400 hover:text-gray-200" title="Toggle theme">{dark ? '☀' : '☾'}</button>

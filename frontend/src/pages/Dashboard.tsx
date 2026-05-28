@@ -10,7 +10,7 @@ import { useSentiment } from '../hooks/useSentiment';
 import { useVulnerabilities } from '../hooks/useVulnerability';
 import { useTeamFilter } from '../hooks/useTeamFilter';
 import { usePolling } from '../hooks/usePolling';
-import { getExportAllPdfUrl } from '../api/exportAll';
+import { getExportAllPdfUrl, triggerBlobDownload } from '../api/exportAll';
 import { useToast } from '../components/Toast';
 import { useQueryClient } from '@tanstack/react-query';
 import HealthGauge from '../components/HealthGauge';
@@ -75,7 +75,7 @@ export default function Dashboard() {
 
   const handleExportAll = useCallback(async () => {
     const url = await getExportAllPdfUrl();
-    window.open(url, '_blank');
+    await triggerBlobDownload(url, 'neuron_full_report.pdf');
   }, []);
 
   return (

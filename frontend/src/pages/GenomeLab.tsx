@@ -1,6 +1,7 @@
 import { useState, useCallback } from 'react';
 import { useGenome, useGenomeHistory, useAnalyzeGenome } from '../hooks/useGenome';
 import { getGenomeCsvUrl, getGenomePdfUrl } from '../api/genome';
+import { triggerBlobDownload } from '../api/exportAll';
 import { useTeamFilter } from '../hooks/useTeamFilter';
 import TeamFilter from '../components/TeamFilter';
 import DNAHelix from '../components/DNAHelix';
@@ -35,9 +36,9 @@ export default function GenomeLab() {
   const [compareIdx, setCompareIdx] = useState<number>(-1);
   const [historyLimit, setHistoryLimit] = useState(10);
 
-  const download = useCallback(async (fn: () => Promise<string>) => {
+  const download = useCallback(async (fn: () => Promise<string>, name: string) => {
     const url = await fn();
-    window.open(url, '_blank');
+    await triggerBlobDownload(url, name);
   }, []);
 
   const genes = genome ? Object.entries(GENE_LABELS).map(([key, label]) => ({
@@ -69,8 +70,8 @@ export default function GenomeLab() {
           <TeamFilter value={teamId} onChange={setTeamId} />
           {genome && (
             <>
-              <button onClick={() => download(getGenomeCsvUrl)} className="py-2 px-3 bg-gray-700 hover:bg-gray-600 text-gray-200 rounded-lg text-xs transition-colors">CSV</button>
-              <button onClick={() => download(getGenomePdfUrl)} className="py-2 px-3 bg-gray-700 hover:bg-gray-600 text-gray-200 rounded-lg text-xs transition-colors">PDF</button>
+              <button onClick={() => download(getGenomeCsvUrl, 'genome_history.csv')} className="py-2 px-3 bg-gray-700 hover:bg-gray-600 text-gray-200 rounded-lg text-xs transition-colors">CSV</button>
+              <button onClick={() => download(getGenomePdfUrl, 'genome_report.pdf')} className="py-2 px-3 bg-gray-700 hover:bg-gray-600 text-gray-200 rounded-lg text-xs transition-colors">PDF</button>
             </>
           )}
           <button
@@ -78,7 +79,7 @@ export default function GenomeLab() {
             disabled={analyze.isPending}
             className="py-2 px-5 bg-neuron-500 hover:bg-neuron-600 disabled:opacity-50 text-white rounded-lg font-medium text-sm transition-colors"
           >
-            {analyze.isPending ? 'Sequencing...' : 'Sequence Genome'}
+            {analyze.isPending ? 'Analyzing...' : 'Analyze Genome'}
           </button>
         </div>
       </div>

@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import Layout from './components/Layout';
 import { ToastProvider } from './components/Toast';
@@ -19,10 +18,9 @@ import Login from './pages/Login';
 
 function AppRoutes() {
   const { isAuthenticated, login } = useAuth();
-  const [showLogin, setShowLogin] = useState(!isAuthenticated);
 
-  if (showLogin && !isAuthenticated) {
-    return <Login onLogin={(token) => { login(token); setShowLogin(false); }} />;
+  if (!isAuthenticated) {
+    return <Login onLogin={(token) => { login(token); }} />;
   }
 
   return (

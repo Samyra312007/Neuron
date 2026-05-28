@@ -1,6 +1,7 @@
 import { useState, useCallback } from 'react';
 import { useDarkMatter, useAnalyzeDarkMatter } from '../hooks/useDarkMatter';
 import { getDarkMatterCsvUrl, getDarkMatterPdfUrl } from '../api/darkMatter';
+import { triggerBlobDownload } from '../api/exportAll';
 import { useTeamFilter } from '../hooks/useTeamFilter';
 import TeamFilter from '../components/TeamFilter';
 import MetricCard from '../components/MetricCard';
@@ -24,9 +25,9 @@ export default function DarkMatter() {
   const { teamId, setTeamId } = useTeamFilter();
   const [selected, setSelected] = useState<TreemapItem | null>(null);
 
-  const download = useCallback(async (fn: () => Promise<string>) => {
+  const download = useCallback(async (fn: () => Promise<string>, name: string) => {
     const url = await fn();
-    window.open(url, '_blank');
+    await triggerBlobDownload(url, name);
   }, []);
 
   const treemapData = report ? CATEGORIES.map(({ key, label, costKey, color }) => ({
@@ -48,8 +49,8 @@ export default function DarkMatter() {
           <TeamFilter value={teamId} onChange={setTeamId} />
           {report && (
             <>
-              <button onClick={() => download(getDarkMatterCsvUrl)} className="py-2 px-3 bg-gray-700 hover:bg-gray-600 text-gray-200 rounded-lg text-xs transition-colors">CSV</button>
-              <button onClick={() => download(getDarkMatterPdfUrl)} className="py-2 px-3 bg-gray-700 hover:bg-gray-600 text-gray-200 rounded-lg text-xs transition-colors">PDF</button>
+              <button onClick={() => download(getDarkMatterCsvUrl, 'dark_matter_report.csv')} className="py-2 px-3 bg-gray-700 hover:bg-gray-600 text-gray-200 rounded-lg text-xs transition-colors">CSV</button>
+              <button onClick={() => download(getDarkMatterPdfUrl, 'dark_matter_report.pdf')} className="py-2 px-3 bg-gray-700 hover:bg-gray-600 text-gray-200 rounded-lg text-xs transition-colors">PDF</button>
             </>
           )}
           <button
