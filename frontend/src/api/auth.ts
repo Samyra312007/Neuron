@@ -36,7 +36,7 @@ export async function register(email: string, password: string, name: string, or
 }
 
 export async function fetchMe(token: string): Promise<AuthUser> {
-  const res = await fetch(`${(await getDownloadUrl('/auth/me')).split('?')[0]}/auth/me`, {
+  const res = await fetch(`${(await getDownloadUrl('/auth/me')).split('?')[0]}`, {
     headers: { Authorization: `Bearer ${token}` },
   });
   if (!res.ok) throw new Error('Session expired');

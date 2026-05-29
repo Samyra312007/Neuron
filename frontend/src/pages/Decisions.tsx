@@ -1,23 +1,21 @@
 import { useState } from 'react';
 import { useDecisions, useCreateDecision, useTransitionDecision, useAutoDiscoverDecisions } from '../hooks/useDecisions';
 import { useToast } from '../components/Toast';
-import LoadingSkeleton from '../components/LoadingSkeleton';
-import AlertBanner from '../components/AlertBanner';
+import Icon from '../components/Icon';
 
-const STATUS_COLORS: Record<string, string> = {
-  proposed: 'text-yellow-400 bg-yellow-600/10',
-  decided: 'text-blue-400 bg-blue-600/10',
-  completed: 'text-emerald-400 bg-emerald-600/10',
-  reverted: 'text-red-400 bg-red-600/10',
-  cancelled: 'text-gray-500 bg-gray-600/10',
+const STATUS_STYLES: Record<string, string> = {
+  proposed: 'bg-health-functional/10 text-health-functional',
+  decided: 'bg-primary-95 text-primary-40',
+  completed: 'bg-health-optimal/10 text-health-optimal',
+  reverted: 'bg-health-critical/10 text-health-critical',
+  cancelled: 'bg-neutral-80/50 text-neutral-50',
 };
 
 const NEXT_ACTIONS: Record<string, string[]> = {
   proposed: ['decide', 'cancel'],
   decided: ['complete', 'revert', 'cancel'],
   completed: ['revert'],
-  reverted: [],
-  cancelled: [],
+  reverted: [], cancelled: [],
 };
 
 export default function Decisions() {
@@ -46,66 +44,83 @@ export default function Decisions() {
   };
 
   return (
-    <div className="space-y-8">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-white">Decision Archaeology</h1>
-          <p className="text-gray-400 mt-1">Track decisions from proposal to completion</p>
-        </div>
-        <div className="flex gap-2">
+    <div className="space-y-6">
+      {/* Actions */}
+      <div className="flex items-center justify-between flex-wrap gap-3">
+        <div />
+        <div className="flex items-center gap-2">
           <button onClick={() => autoDiscover.mutate(undefined, {
             onSuccess: (d) => addToast(`Discovered ${d.discovered} decisions`, 'success'),
             onError: () => addToast('Auto-discovery failed', 'error'),
-          })} disabled={autoDiscover.isPending} className="py-2 px-4 bg-gray-700 hover:bg-gray-600 disabled:opacity-50 text-gray-200 rounded-lg text-xs transition-colors">
-            {autoDiscover.isPending ? 'Searching...' : 'Auto-Discover'}
+          })} disabled={autoDiscover.isPending} className="btn-secondary gap-2">
+            <Icon name="search" size={16} />{autoDiscover.isPending ? 'Searching...' : 'Auto-Discover'}
           </button>
-          <button onClick={() => setShowForm(!showForm)} className="py-2 px-5 bg-neuron-500 hover:bg-neuron-600 text-white rounded-lg font-medium text-sm transition-colors">
-            {showForm ? 'Cancel' : 'New Decision'}
+          <button onClick={() => setShowForm(!showForm)} className="btn-primary gap-2">
+            <Icon name="add" size={18} />{showForm ? 'Cancel' : 'New Decision'}
           </button>
         </div>
       </div>
 
+      {/* Create form */}
       {showForm && (
-        <div className="neuron-card space-y-3">
-          <input value={title} onChange={e => setTitle(e.target.value)} placeholder="Decision title" className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-white text-sm focus:outline-none focus:border-neuron-500" />
-          <input value={desc} onChange={e => setDesc(e.target.value)} placeholder="Description (optional)" className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-white text-sm focus:outline-none focus:border-neuron-500" />
-          <input value={initiator} onChange={e => setInitiator(e.target.value)} placeholder="Initiator name (optional)" className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-white text-sm focus:outline-none focus:border-neuron-500" />
-          <button onClick={handleCreate} disabled={!title || create.isPending} className="py-2 px-5 bg-neuron-500 hover:bg-neuron-600 disabled:opacity-50 text-white rounded-lg text-sm transition-colors">Record Decision</button>
+        <div className="card space-y-3 animate-slide-up">
+          <div className="flex items-center gap-2 mb-1">
+            <Icon name="edit_note" size={18} className="text-primary-40" />
+            <h3 className="section-label">Record Decision</h3>
+          </div>
+          <input value={title} onChange={e => setTitle(e.target.value)} placeholder="Decision title"
+            className="w-full bg-surface-container border border-neutral-80/50 rounded-xl px-4 py-2.5 text-sm text-neutral-20 placeholder-neutral-60 focus:outline-none focus:border-primary-40" />
+          <input value={desc} onChange={e => setDesc(e.target.value)} placeholder="Description (optional)"
+            className="w-full bg-surface-container border border-neutral-80/50 rounded-xl px-4 py-2.5 text-sm text-neutral-20 placeholder-neutral-60 focus:outline-none focus:border-primary-40" />
+          <input value={initiator} onChange={e => setInitiator(e.target.value)} placeholder="Initiator name (optional)"
+            className="w-full bg-surface-container border border-neutral-80/50 rounded-xl px-4 py-2.5 text-sm text-neutral-20 placeholder-neutral-60 focus:outline-none focus:border-primary-40" />
+          <button onClick={handleCreate} disabled={!title || create.isPending} className="btn-primary gap-2">
+            <Icon name="check" size={18} />Record Decision
+          </button>
         </div>
       )}
 
-      {isLoading ? (
-        <LoadingSkeleton lines={6} />
-      ) : decisions && decisions.length > 0 ? (
+      {/* Loading */}
+      {isLoading && (
+        <div className="space-y-3">
+          {[1,2,3].map(i => <div key={i} className="card h-20 animate-shimmer rounded-2xl" />)}
+        </div>
+      )}
+
+      {/* Decision cards */}
+      {decisions && decisions.length > 0 ? (
         <div className="space-y-3">
           {decisions.map((d) => (
-            <div key={d.id} className="neuron-card">
+            <div key={d.id} className="card hover:shadow-card-hover transition-all animate-slide-up">
               <div className="flex items-start justify-between">
                 <div className="flex-1">
                   <div className="flex items-center gap-2 mb-1">
-                    <span className={`text-xs font-medium px-2 py-0.5 rounded ${STATUS_COLORS[d.status] || 'text-gray-400'}`}>{d.status}</span>
-                    <h3 className="text-sm font-medium text-white">{d.title}</h3>
+                    <span className={`badge text-[10px] ${STATUS_STYLES[d.status] || 'bg-neutral-80/50 text-neutral-50'}`}>{d.status}</span>
+                    <h3 className="text-sm font-semibold text-neutral-20">{d.title}</h3>
                   </div>
-                  {d.description && <p className="text-xs text-gray-400 mb-2">{d.description}</p>}
-                  <div className="flex items-center gap-3 text-xs text-gray-500">
+                  {d.description && <p className="text-xs text-neutral-50 mb-2">{d.description}</p>}
+                  <div className="flex items-center gap-3 text-[11px] text-neutral-60">
                     {d.initiator_name && <span>By: {d.initiator_name}</span>}
                     {d.decided_at && <span>Decided: {new Date(d.decided_at).toLocaleDateString()}</span>}
                     {d.completed_at && <span>Completed: {new Date(d.completed_at).toLocaleDateString()}</span>}
                   </div>
                 </div>
-                <div className="flex gap-1 ml-4">
+                <div className="flex gap-1 ml-4 shrink-0">
                   {NEXT_ACTIONS[d.status]?.map((action) => (
                     <button key={action} onClick={() => handleTransition(d.id, action)} disabled={transition.isPending}
-                      className="text-xs px-2 py-1 rounded bg-gray-700 text-gray-300 hover:bg-gray-600 transition-colors">{action}</button>
+                      className="btn-ghost text-xs capitalize">{action}</button>
                   ))}
                 </div>
               </div>
             </div>
           ))}
         </div>
-      ) : (
-        <AlertBanner type="info">No decisions recorded. Create one or use auto-discover to find decisions in event data.</AlertBanner>
-      )}
+      ) : !isLoading ? (
+        <div className="card flex items-center gap-3">
+          <Icon name="info" size={18} className="text-primary-40" />
+          <span className="text-sm text-neutral-50">No decisions recorded. Create one or use auto-discover.</span>
+        </div>
+      ) : null}
     </div>
   );
 }

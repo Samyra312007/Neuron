@@ -1,100 +1,134 @@
+import { useMemo } from 'react';
 import { useCognitiveLoad, useAnalyzeCognitiveLoad } from '../hooks/useCognitiveLoad';
 import CognitiveHeatmap from '../components/CognitiveHeatmap';
-import MetricCard from '../components/MetricCard';
-import AlertBanner from '../components/AlertBanner';
-import LoadingSkeleton from '../components/LoadingSkeleton';
+import Icon from '../components/Icon';
+import { scoreColor } from '../lib/utils';
+
+function RiskGauge({ value, label, color }: { value: number; label: string; color: string }) {
+  return (
+    <div className="card hover:shadow-card-hover transition-all">
+      <div className="flex items-center gap-2 mb-2">
+        <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ backgroundColor: `${color}15` }}>
+          <span className="text-lg font-bold font-display" style={{ color }}>{Math.round(value * 100)}%</span>
+        </div>
+        <span className="text-xs text-neutral-50">{label}</span>
+      </div>
+      <div className="h-2 bg-surface-container rounded-full overflow-hidden">
+        <div className="h-full rounded-full transition-all duration-700" style={{ width: `${value * 100}%`, backgroundColor: color }} />
+      </div>
+    </div>
+  );
+}
 
 export default function CognitiveLoad() {
   const { data: metric, isLoading, error } = useCognitiveLoad();
   const analyze = useAnalyzeCognitiveLoad();
 
-  const heatmapData = metric?.team_breakdown
-    ? Object.entries(metric.team_breakdown).map(([team, score]) => ({
-        team,
-        metrics: [
-          { label: 'Composite', value: (score as number) || 0, color: (score as number) > 0.6 ? '#ef4444' : (score as number) > 0.3 ? '#f59e0b' : '#10b981' },
-        ],
-      }))
-    : [];
+  const metrics = metric ? [
+    { key: 'Workload', value: metric.workload_score, icon: 'assignment' as const, color: '#EAB308' },
+    { key: 'Interactions', value: metric.interaction_density, icon: 'hub' as const, color: '#065291' },
+    { key: 'Meeting Pressure', value: metric.meeting_pressure, icon: 'calendar_today' as const, color: '#8B5CF6' },
+    { key: 'Fragmentation', value: metric.task_fragmentation, icon: 'puzzle' as const, color: '#EF4444' },
+    { key: 'Decision Fatigue', value: metric.decision_fatigue, icon: 'psychology' as const, color: '#F97316' },
+    { key: 'Burnout Risk', value: metric.burnout_risk, icon: 'local_fire_department' as const, color: metric.burnout_risk > 0.6 ? '#EF4444' : '#22C55E' },
+  ] : [];
 
-  if (!error && !isLoading && metric?.team_breakdown) {
-    const labels = ['Workload', 'Interactn', 'Meetings', 'Fragmentn', 'Decision Fat.', 'Burnout'];
-    const values = [
-      metric.workload_score,
-      metric.interaction_density,
-      metric.meeting_pressure,
-      metric.task_fragmentation,
-      metric.decision_fatigue,
-      metric.burnout_risk,
-    ];
-    heatmapData.unshift({
-      team: 'ORG AVG',
-      metrics: values.map((v, i) => ({
-        label: labels[i],
-        value: v,
-        color: v > 0.6 ? '#ef4444' : v > 0.3 ? '#f59e0b' : '#10b981',
-      })),
-    });
+  const heatmapData = useMemo(() => {
+    const base = metric?.team_breakdown
+      ? Object.entries(metric.team_breakdown).map(([team, score]) => ({
+          team, metrics: [{ label: 'Composite', value: (score as number) || 0, color: scoreColor(score as number) }],
+        }))
+      : [];
+    if (metric?.team_breakdown) {
+      base.unshift({
+        team: 'ORG AVG',
+        metrics: [
+          { label: 'Workload', value: metric.workload_score, color: scoreColor(metric.workload_score) },
+          { label: 'Interactn', value: metric.interaction_density, color: scoreColor(metric.interaction_density) },
+          { label: 'Meetings', value: metric.meeting_pressure, color: scoreColor(metric.meeting_pressure) },
+          { label: 'Fragmentn', value: metric.task_fragmentation, color: scoreColor(metric.task_fragmentation) },
+          { label: 'Dec. Fatigue', value: metric.decision_fatigue, color: scoreColor(metric.decision_fatigue) },
+          { label: 'Burnout', value: metric.burnout_risk, color: scoreColor(metric.burnout_risk) },
+        ],
+      });
+    }
+    return base;
+  }, [metric]);
+
+  if (error) {
+    return (
+      <div className="flex flex-col items-center justify-center py-24 gap-5">
+        <div className="w-16 h-16 rounded-2xl bg-orange-50 flex items-center justify-center">
+          <Icon name="psychiatry" size={32} className="text-health-critical" />
+        </div>
+        <div className="text-center max-w-sm">
+          <h2 className="text-xl font-display font-semibold text-neutral-20 mb-1">No Cognitive Load Data</h2>
+          <p className="text-sm text-neutral-50 mb-4">Analyze team overload and burnout risk.</p>
+          <button onClick={() => analyze.mutate()} disabled={analyze.isPending} className="btn-primary gap-2">
+            <Icon name="play_arrow" size={18} />{analyze.isPending ? 'Analyzing...' : 'Analyze Cognitive Load'}
+          </button>
+        </div>
+      </div>
+    );
   }
 
-  return (
-    <div className="space-y-8">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-white">Cognitive Load</h1>
-          <p className="text-gray-400 mt-1">Team overload, burnout risk & interaction density</p>
+  if (isLoading) {
+    return (
+      <div className="space-y-6">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+          {[1,2,3,4,5,6].map(i => <div key={i} className="card h-24 animate-shimmer rounded-2xl" />)}
         </div>
-        <button
-          onClick={() => analyze.mutate()}
-          disabled={analyze.isPending}
-          className="py-2 px-5 bg-neuron-500 hover:bg-neuron-600 disabled:opacity-50 text-white rounded-lg font-medium text-sm transition-colors"
-        >
-          {analyze.isPending ? 'Analyzing...' : 'Analyze Cognitive Load'}
+        <div className="card h-64 animate-shimmer rounded-2xl" />
+      </div>
+    );
+  }
+
+  if (!metric) return null;
+
+  return (
+    <div className="space-y-6">
+      <div className="flex justify-end">
+        <button onClick={() => analyze.mutate()} disabled={analyze.isPending} className="btn-primary gap-2">
+          <Icon name="refresh" size={18} />{analyze.isPending ? 'Analyzing...' : 'Analyze'}
         </button>
       </div>
 
-      {error && (
-        <AlertBanner type="info">
-          No cognitive load data yet. Click <strong>"Analyze Cognitive Load"</strong> to begin.
-        </AlertBanner>
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+        {metrics.map(m => <RiskGauge key={m.key} value={m.value} label={m.key} color={m.color} />)}
+      </div>
+
+      <div className="card">
+        <div className="flex items-center gap-2 mb-3">
+          <Icon name="equalizer" size={18} className="text-primary-40" />
+          <h3 className="section-label">Cognitive Load Index</h3>
+        </div>
+        <div className="flex items-center gap-5">
+          <div className={`text-4xl font-bold font-display ${metric.composite_score > 0.6 ? 'text-health-critical' : metric.composite_score > 0.3 ? 'text-health-functional' : 'text-health-optimal'}`}>
+            {Math.round(metric.composite_score * 100)}%
+          </div>
+          <div className="flex-1 h-4 bg-surface-container rounded-full overflow-hidden">
+            <div className={`h-full rounded-full transition-all duration-700 ${
+              metric.composite_score > 0.6 ? 'bg-health-critical' : metric.composite_score > 0.3 ? 'bg-health-functional' : 'bg-health-optimal'
+            }`} style={{ width: `${metric.composite_score * 100}%` }} />
+          </div>
+          <div className="text-xs text-neutral-50 text-right">
+            <div className="font-semibold text-neutral-30">
+              {metric.composite_score > 0.6 ? 'High Risk' : metric.composite_score > 0.3 ? 'Moderate' : 'Healthy'}
+            </div>
+            <span>Composite Score</span>
+          </div>
+        </div>
+      </div>
+
+      {heatmapData.length > 0 && (
+        <div className="card">
+          <div className="flex items-center gap-2 mb-4">
+            <Icon name="grid_on" size={18} className="text-primary-40" />
+            <h3 className="section-label">Team Breakdown</h3>
+          </div>
+          <CognitiveHeatmap data={heatmapData} />
+        </div>
       )}
-
-      {isLoading ? (
-        <LoadingSkeleton lines={6} />
-      ) : metric ? (
-        <>
-          <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-4">
-            <MetricCard title="Workload" value={`${Math.round(metric.workload_score * 100)}%`} subtitle="Volume vs capacity" icon="📊" color="#f59e0b" />
-            <MetricCard title="Interactions" value={`${Math.round(metric.interaction_density * 100)}%`} subtitle="Cross-team pings" icon="🔄" color="#00b8f0" />
-            <MetricCard title="Meeting Pressure" value={`${Math.round(metric.meeting_pressure * 100)}%`} subtitle="Meeting vs focus time" icon="📅" color="#8b5cf6" />
-            <MetricCard title="Fragmentation" value={`${Math.round(metric.task_fragmentation * 100)}%`} subtitle="Context switches" icon="🧩" color="#ef4444" />
-            <MetricCard title="Decision Fatigue" value={`${Math.round(metric.decision_fatigue * 100)}%`} subtitle="Decisions per day" icon="🧠" color="#f97316" />
-            <MetricCard title="Burnout Risk" value={`${Math.round(metric.burnout_risk * 100)}%`} subtitle="Exhaustion risk" icon="🔥" color={metric.burnout_risk > 0.6 ? '#ef4444' : '#10b981'} />
-          </div>
-
-          <div className="neuron-card">
-            <h2 className="text-sm font-semibold text-gray-400 mb-4">Composite Score</h2>
-            <div className="flex items-center gap-4">
-              <div className={`text-4xl font-bold ${metric.composite_score > 0.6 ? 'text-red-400' : metric.composite_score > 0.3 ? 'text-yellow-400' : 'text-emerald-400'}`}>
-                {Math.round(metric.composite_score * 100)}%
-              </div>
-              <div className="flex-1 h-3 bg-gray-800 rounded-full overflow-hidden">
-                <div
-                  className={`h-full rounded-full transition-all duration-700 ${metric.composite_score > 0.6 ? 'bg-red-500' : metric.composite_score > 0.3 ? 'bg-yellow-500' : 'bg-emerald-500'}`}
-                  style={{ width: `${metric.composite_score * 100}%` }}
-                />
-              </div>
-            </div>
-          </div>
-
-          {heatmapData.length > 0 && (
-            <div className="neuron-card">
-              <h2 className="text-sm font-semibold text-gray-400 mb-4">Team Breakdown Heatmap</h2>
-              <CognitiveHeatmap data={heatmapData} />
-            </div>
-          )}
-        </>
-      ) : null}
     </div>
   );
 }

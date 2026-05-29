@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react';
 import * as d3 from 'd3';
+import { cssVar, useDark } from '../lib/d3-theme';
 
 interface Gene {
   label: string;
@@ -14,6 +15,7 @@ interface Props {
 
 export default function DNAHelix({ genes, previousGenes }: Props) {
   const ref = useRef<HTMLDivElement>(null);
+  const dark = useDark();
 
   useEffect(() => {
     if (!ref.current || !genes.length) return;
@@ -25,6 +27,11 @@ export default function DNAHelix({ genes, previousGenes }: Props) {
     const frequency = 0.012;
     const rungs = genes.length;
     const spacing = height / (rungs + 1);
+
+    const neutral50 = cssVar('--neutral-50');
+    const neutral60 = cssVar('--neutral-60');
+    const healthOptimal = cssVar('--health-optimal');
+    const healthCritical = cssVar('--health-critical');
 
     const svg = d3.select(ref.current).selectAll('svg').data([null]).join('svg')
       .attr('width', width)
@@ -38,28 +45,14 @@ export default function DNAHelix({ genes, previousGenes }: Props) {
     }));
 
     const lineLeft = d3.line<{ y: number; x1: number }>()
-      .x(d => d.x1)
-      .y(d => d.y)
-      .curve(d3.curveBasis);
-
+      .x(d => d.x1).y(d => d.y).curve(d3.curveBasis);
     const lineRight = d3.line<{ y: number; x2: number }>()
-      .x(d => d.x2)
-      .y(d => d.y)
-      .curve(d3.curveBasis);
+      .x(d => d.x2).y(d => d.y).curve(d3.curveBasis);
 
-    svg.append('path')
-      .datum(strandData)
-      .attr('d', lineLeft as any)
-      .attr('fill', 'none')
-      .attr('stroke', '#4b5563')
-      .attr('stroke-width', 3);
-
-    svg.append('path')
-      .datum(strandData)
-      .attr('d', lineRight as any)
-      .attr('fill', 'none')
-      .attr('stroke', '#4b5563')
-      .attr('stroke-width', 3);
+    svg.append('path').datum(strandData).attr('d', lineLeft as any)
+      .attr('fill', 'none').attr('stroke', neutral50).attr('stroke-width', 3);
+    svg.append('path').datum(strandData).attr('d', lineRight as any)
+      .attr('fill', 'none').attr('stroke', neutral50).attr('stroke-width', 3);
 
     genes.forEach((gene, i) => {
       const y = (i + 1) * spacing;
@@ -70,28 +63,15 @@ export default function DNAHelix({ genes, previousGenes }: Props) {
       const prev = previousGenes?.[i];
 
       svg.append('line')
-        .attr('x1', x1)
-        .attr('y1', y)
-        .attr('x2', x2)
-        .attr('y2', y)
-        .attr('stroke', gene.color)
-        .attr('stroke-width', 4)
-        .attr('stroke-opacity', gene.score)
-        .attr('stroke-linecap', 'round');
+        .attr('x1', x1).attr('y1', y).attr('x2', x2).attr('y2', y)
+        .attr('stroke', gene.color).attr('stroke-width', 4)
+        .attr('stroke-opacity', gene.score).attr('stroke-linecap', 'round');
 
       if (prev) {
-        const prevSinVal = Math.sin(y * frequency);
-        const prevX1 = centerX - amplitude * prevSinVal;
-        const prevX2 = centerX + amplitude * prevSinVal;
         svg.append('line')
-          .attr('x1', prevX1)
-          .attr('y1', y + 8)
-          .attr('x2', prevX2)
-          .attr('y2', y + 8)
-          .attr('stroke', gene.color)
-          .attr('stroke-width', 2)
-          .attr('stroke-opacity', 0.3)
-          .attr('stroke-linecap', 'round')
+          .attr('x1', x1).attr('y1', y + 8).attr('x2', x2).attr('y2', y + 8)
+          .attr('stroke', gene.color).attr('stroke-width', 2)
+          .attr('stroke-opacity', 0.3).attr('stroke-linecap', 'round')
           .attr('stroke-dasharray', '4,3');
       }
 
@@ -100,38 +80,25 @@ export default function DNAHelix({ genes, previousGenes }: Props) {
       const scoreLabelX = x1 < centerX ? x2 + 8 : x1 - 8;
       const scoreAnchor = x1 < centerX ? 'start' : 'end';
 
-      svg.append('text')
-        .attr('x', labelX)
-        .attr('y', y + 4)
-        .attr('text-anchor', anchor)
-        .attr('fill', '#9ca3af')
-        .attr('font-size', '11px')
-        .text(gene.label);
+      svg.append('text').attr('x', labelX).attr('y', y + 4)
+        .attr('text-anchor', anchor).attr('fill', neutral60)
+        .attr('font-size', '11px').text(gene.label);
 
-      const scoreText = svg.append('text')
-        .attr('x', scoreLabelX)
-        .attr('y', y + 4)
-        .attr('text-anchor', scoreAnchor)
-        .attr('fill', gene.color)
-        .attr('font-size', '12px')
-        .attr('font-weight', '700')
+      svg.append('text').attr('x', scoreLabelX).attr('y', y + 4)
+        .attr('text-anchor', scoreAnchor).attr('fill', gene.color)
+        .attr('font-size', '12px').attr('font-weight', '700')
         .text(`${Math.round(gene.score * 100)}%`);
 
       if (prev) {
         const diff = gene.score - prev.score;
-        const diffColor = diff > 0 ? '#10b981' : diff < 0 ? '#ef4444' : '#6b7280';
-        svg.append('text')
-          .attr('x', scoreLabelX)
-          .attr('y', y + 20)
-          .attr('text-anchor', scoreAnchor)
-          .attr('fill', diffColor)
-          .attr('font-size', '10px')
-          .attr('font-weight', '500')
+        const diffColor = diff > 0 ? healthOptimal : diff < 0 ? healthCritical : neutral60;
+        svg.append('text').attr('x', scoreLabelX).attr('y', y + 20)
+          .attr('text-anchor', scoreAnchor).attr('fill', diffColor)
+          .attr('font-size', '10px').attr('font-weight', '500')
           .text(`${diff > 0 ? '+' : ''}${(diff * 100).toFixed(0)}%`);
       }
     });
-
-  }, [genes, previousGenes]);
+  }, [genes, previousGenes, dark]);
 
   return <div ref={ref} className="w-full" style={{ minHeight: 300 }} />;
 }

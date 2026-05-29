@@ -15,9 +15,20 @@ app = FastAPI(
     docs_url="/docs",
 )
 
+import os
+
+_dev_origins = os.getenv("CORS_ORIGINS", "").split(",") if os.getenv("CORS_ORIGINS") else []
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173", "http://127.0.0.1:5173"],
+    allow_origins=[
+        "http://localhost:5173",
+        "http://localhost:5174",
+        "http://localhost:5175",
+        "http://127.0.0.1:5173",
+        "http://127.0.0.1:5174",
+        "http://127.0.0.1:5175",
+        *[_o.strip() for _o in _dev_origins if _o.strip()],
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

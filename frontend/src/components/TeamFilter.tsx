@@ -12,7 +12,7 @@ export default function TeamFilter({ value, onChange }: TeamFilterProps) {
     <select
       value={value}
       onChange={(e) => onChange(e.target.value)}
-      className="bg-gray-800 border border-gray-700 rounded-lg px-3 py-1.5 text-xs text-gray-300 focus:outline-none focus:border-neuron-500"
+      className="bg-surface-container border border-neutral-80/50 rounded-lg px-3 py-1.5 text-xs text-neutral-50 focus:outline-none focus:border-primary-40"
     >
       <option value="">All Teams</option>
       {teams?.map((t) => (

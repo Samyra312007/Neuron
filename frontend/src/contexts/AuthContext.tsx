@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, type ReactNode } from 'react';
+import { createContext, useContext, useState, type ReactNode } from 'react';
 
 interface AuthUser {
   id: string;
@@ -11,7 +11,7 @@ interface AuthUser {
 interface AuthCtx {
   token: string | null;
   user: AuthUser | null;
-  login: (token: string) => void;
+  login: (token: string, user: AuthUser) => void;
   logout: () => void;
   isAuthenticated: boolean;
 }
@@ -31,10 +31,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return u ? JSON.parse(u) : null;
   });
 
-  const login = (t: string) => {
+  const login = (t: string, u: AuthUser) => {
     setToken(t);
-    const u = localStorage.getItem('neuron-user');
-    if (u) setUser(JSON.parse(u));
+    setUser(u);
   };
 
   const logout = () => {

@@ -2,10 +2,51 @@ import { useState, useRef } from 'react';
 import { useSimulateRipple } from '../hooks/useRipple';
 import { useGenome } from '../hooks/useGenome';
 import { useMetabolic } from '../hooks/useMetabolic';
-import AlertBanner from '../components/AlertBanner';
+import Icon from '../components/Icon';
 import type { RippleResult } from '../api/ripple';
 
-const BASELINE_METRICS = ['collaboration', 'decision_making', 'knowledge_flow', 'innovation', 'resilience', 'vitality', 'cognitive_load', 'dark_matter_cost'];
+function EffectCard({ metric, effect, current }: { metric: string; effect: any; current: number }) {
+  const predicted = effect.direction === 'positive'
+    ? current + effect.magnitude * (1 - current)
+    : effect.direction === 'negative'
+    ? current - effect.magnitude * current
+    : current;
+  const diff = predicted - current;
+  const dir = effect.direction === 'positive' ? 'up' : effect.direction === 'negative' ? 'down' : 'neutral';
+  return (
+    <div className={`card border-l-4 animate-slide-up ${
+      dir === 'up' ? 'border-l-health-optimal' : dir === 'down' ? 'border-l-health-critical' : 'border-l-neutral-70'
+    }`}>
+      <div className="flex items-center justify-between mb-2">
+        <h4 className="text-sm font-medium text-neutral-30 capitalize">{metric.replace(/_/g, ' ')}</h4>
+        <span className={`flex items-center gap-0.5 text-sm font-bold ${
+          dir === 'up' ? 'text-health-optimal' : dir === 'down' ? 'text-health-critical' : 'text-neutral-50'
+        }`}>
+          <Icon name={dir === 'up' ? 'arrow_upward' : dir === 'down' ? 'arrow_downward' : 'remove'} size={16} />
+          {diff > 0 ? '+' : ''}{(diff * 100).toFixed(0)}%
+        </span>
+      </div>
+      <div className="flex items-center gap-3 text-xs text-neutral-50 mb-2">
+        <span>Current: {metric.includes('_hours') || metric === 'dark_matter_cost' ? current.toFixed(1) : `${Math.round(current * 100)}%`}</span>
+        <span>→</span>
+        <span className="font-medium text-neutral-30">Predicted: {metric.includes('_hours') || metric === 'dark_matter_cost' ? predicted.toFixed(1) : `${Math.round(predicted * 100)}%`}</span>
+      </div>
+      <div className="h-2 bg-surface-container rounded-full overflow-hidden relative">
+        <div className={`h-full rounded-full transition-all ${
+          dir === 'up' ? 'bg-health-optimal' : dir === 'down' ? 'bg-health-critical' : 'bg-neutral-70'
+        }`} style={{ width: `${effect.magnitude * 100}%` }} />
+      </div>
+      <p className="text-xs text-neutral-50 mt-2">{effect.description}</p>
+      {effect.affected_teams?.length > 0 && (
+        <div className="flex flex-wrap gap-1 mt-2">
+          {effect.affected_teams.map((t: string) => (
+            <span key={t} className="chip bg-surface-container text-neutral-50 text-[10px]">{t}</span>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
 
 export default function Ripple() {
   const [description, setDescription] = useState('');
@@ -41,81 +82,74 @@ export default function Ripple() {
     });
   };
 
-  const directionColor = (dir: string) =>
-    dir === 'positive' ? 'text-emerald-400' : dir === 'negative' ? 'text-red-400' : 'text-gray-400';
-  const directionIcon = (dir: string) =>
-    dir === 'positive' ? '▲' : dir === 'negative' ? '▼' : '◆';
-
   return (
-    <div className="space-y-8">
-      <div>
-        <h1 className="text-2xl font-bold text-white">Ripple Simulator</h1>
-        <p className="text-gray-400 mt-1">Model the organizational impact of any proposed change</p>
-      </div>
-
-      <div className="neuron-card max-w-2xl">
+    <div className="space-y-6">
+      {/* Simulate form */}
+      <div className="card max-w-2xl">
+        <div className="flex items-center gap-2 mb-4">
+          <Icon name="water_drop" size={20} className="text-primary-40" />
+          <h3 className="section-label">New Simulation</h3>
+        </div>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-300 mb-1">Change Description</label>
+            <label className="block text-sm font-medium text-neutral-30 mb-1">Change Description</label>
             <textarea
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               placeholder="e.g., Implement a 4-day workweek, restructure Engineering into pods, migrate to microservices..."
               rows={3}
-              className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2.5 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-neuron-500"
+              className="w-full bg-surface-container border border-neutral-80/50 rounded-xl px-4 py-2.5 text-sm text-neutral-20 placeholder-neutral-60 focus:outline-none focus:border-primary-40 transition-colors resize-none"
             />
           </div>
-
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-300 mb-1">Target Team (optional)</label>
-              <input
-                type="text"
-                value={target}
-                onChange={(e) => setTarget(e.target.value)}
-                placeholder="e.g., Engineering"
-                className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2.5 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-neuron-500"
-              />
+              <label className="block text-sm font-medium text-neutral-30 mb-1">Target Team <span className="text-neutral-60 font-normal">(optional)</span></label>
+              <input type="text" value={target} onChange={(e) => setTarget(e.target.value)} placeholder="e.g., Engineering"
+                className="w-full bg-surface-container border border-neutral-80/50 rounded-xl px-4 py-2.5 text-sm text-neutral-20 placeholder-neutral-60 focus:outline-none focus:border-primary-40" />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-300 mb-1">Intensity</label>
-              <select
-                value={intensity}
-                onChange={(e) => setIntensity(e.target.value)}
-                className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2.5 text-sm text-white focus:outline-none focus:border-neuron-500"
-              >
-                <option value="low">Low — Incremental Change</option>
+              <label className="block text-sm font-medium text-neutral-30 mb-1">Intensity</label>
+              <select value={intensity} onChange={(e) => setIntensity(e.target.value)}
+                className="w-full bg-surface-container border border-neutral-80/50 rounded-xl px-4 py-2.5 text-sm text-neutral-20 focus:outline-none focus:border-primary-40">
+                <option value="low">Low — Incremental</option>
                 <option value="medium">Medium — Moderate Shift</option>
-                <option value="high">High — Radical Transformation</option>
+                <option value="high">High — Radical</option>
               </select>
             </div>
           </div>
-
-          <button
-            type="submit"
-            disabled={simulate.isPending || !description.trim()}
-            className="py-2.5 px-6 bg-neuron-500 hover:bg-neuron-600 disabled:opacity-50 text-white rounded-lg font-medium text-sm transition-colors"
-          >
+          <button type="submit" disabled={simulate.isPending || !description.trim()}
+            className="btn-primary gap-2">
+            <Icon name={simulate.isPending ? 'sync' : 'play_arrow'} size={18} />
             {simulate.isPending ? 'Simulating...' : 'Run Simulation'}
           </button>
         </form>
       </div>
 
+      {/* Error */}
       {simulate.error && (
-        <AlertBanner type="error">Simulation failed. Please try again.</AlertBanner>
+        <div className="card border-health-critical/30 bg-health-critical/5 flex items-center gap-3">
+          <Icon name="error" size={20} className="text-health-critical" />
+          <span className="text-sm text-neutral-30">Simulation failed. Please try again.</span>
+        </div>
       )}
 
+      {/* Results */}
       {result && currentBaseline.current && (
-        <div className="space-y-6">
-          <h2 className="text-lg font-semibold text-white">Before / After Comparison</h2>
-          <div className="neuron-card overflow-x-auto">
+        <div className="space-y-5 animate-slide-up">
+          <div className="flex items-center gap-2">
+            <Icon name="neurology" size={20} className="text-primary-40" />
+            <h2 className="text-lg font-display font-semibold text-neutral-20">Ripple Impact</h2>
+          </div>
+
+          {/* Comparison table */}
+          <div className="card overflow-hidden p-0">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-gray-800">
-                  <th className="text-left py-2 px-3 text-gray-400 font-medium">Metric</th>
-                  <th className="text-right py-2 px-3 text-gray-400 font-medium">Current</th>
-                  <th className="text-right py-2 px-3 text-gray-400 font-medium">Predicted</th>
-                  <th className="text-right py-2 px-3 text-gray-400 font-medium">Change</th>
+                <tr className="border-b border-neutral-80/50 bg-surface-container/50">
+                  <th className="text-left py-3 px-4 text-neutral-50 font-medium text-[11px] uppercase tracking-wider">Metric</th>
+                  <th className="text-right py-3 px-4 text-neutral-50 font-medium text-[11px] uppercase tracking-wider">Current</th>
+                  <th className="text-right py-3 px-4 text-neutral-50 font-medium text-[11px] uppercase tracking-wider">Predicted</th>
+                  <th className="text-right py-3 px-4 text-neutral-50 font-medium text-[11px] uppercase tracking-wider">Change</th>
                 </tr>
               </thead>
               <tbody>
@@ -128,19 +162,17 @@ export default function Ripple() {
                     : current;
                   const diff = predicted - current;
                   return (
-                    <tr key={metric} className="border-b border-gray-800/50">
-                      <td className="py-2 px-3 text-gray-300 capitalize">{metric.replace(/_/g, ' ')}</td>
-                      <td className={`py-2 px-3 text-right ${current > 0 ? 'text-gray-200' : 'text-gray-600'}`}>
-                        {metric.includes('_hours') || metric === 'dark_matter_cost'
-                          ? (current).toFixed(1)
-                          : `${Math.round(current * 100)}%`}
+                    <tr key={metric} className="border-b border-neutral-80/20 hover:bg-surface-container/30 transition-colors">
+                      <td className="py-3 px-4 text-neutral-30 capitalize">{metric.replace(/_/g, ' ')}</td>
+                      <td className={`py-3 px-4 text-right font-mono ${current > 0 ? 'text-neutral-30' : 'text-neutral-60'}`}>
+                        {metric.includes('_hours') || metric === 'dark_matter_cost' ? current.toFixed(1) : `${Math.round(current * 100)}%`}
                       </td>
-                      <td className={`py-2 px-3 text-right ${predicted > 0 ? 'text-gray-200' : 'text-gray-600'}`}>
-                        {metric.includes('_hours') || metric === 'dark_matter_cost'
-                          ? (predicted).toFixed(1)
-                          : `${Math.round(predicted * 100)}%`}
+                      <td className={`py-3 px-4 text-right font-mono ${predicted > 0 ? 'text-neutral-20 font-semibold' : 'text-neutral-60'}`}>
+                        {metric.includes('_hours') || metric === 'dark_matter_cost' ? predicted.toFixed(1) : `${Math.round(predicted * 100)}%`}
                       </td>
-                      <td className={`py-2 px-3 text-right font-medium ${diff > 0 ? 'text-emerald-400' : diff < 0 ? 'text-red-400' : 'text-gray-500'}`}>
+                      <td className={`py-3 px-4 text-right font-semibold font-mono ${
+                        diff > 0 ? 'text-health-optimal' : diff < 0 ? 'text-health-critical' : 'text-neutral-50'
+                      }`}>
                         {diff > 0 ? '+' : ''}{(diff * 100).toFixed(0)}%
                       </td>
                     </tr>
@@ -150,40 +182,12 @@ export default function Ripple() {
             </table>
           </div>
 
-          <h2 className="text-lg font-semibold text-white">Ripple Details</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {Object.entries(result).map(([metric, effect]) => (
-              <div key={metric} className="neuron-card">
-                <div className="flex items-center justify-between mb-3">
-                  <h3 className="text-sm font-medium text-gray-300 capitalize">{metric.replace(/_/g, ' ')}</h3>
-                  <span className={`text-lg font-bold ${directionColor(effect.direction)}`}>
-                    {directionIcon(effect.direction)}
-                  </span>
-                </div>
-                <div className="mb-3">
-                  <div className="h-2 bg-gray-800 rounded-full overflow-hidden">
-                    <div
-                      className={`h-full rounded-full transition-all ${
-                        effect.direction === 'positive' ? 'bg-emerald-500' :
-                        effect.direction === 'negative' ? 'bg-red-500' : 'bg-gray-600'
-                      }`}
-                      style={{ width: `${effect.magnitude * 100}%` }}
-                    />
-                  </div>
-                  <span className="text-xs text-gray-500 mt-1 block">
-                    Magnitude: {Math.round(effect.magnitude * 100)}%
-                  </span>
-                </div>
-                <p className="text-sm text-gray-400">{effect.description}</p>
-                {effect.affected_teams && effect.affected_teams.length > 0 && (
-                  <div className="mt-2 flex flex-wrap gap-1">
-                    {effect.affected_teams.map((t: string) => (
-                      <span key={t} className="text-xs bg-gray-800 text-gray-300 px-2 py-0.5 rounded-full">{t}</span>
-                    ))}
-                  </div>
-                )}
-              </div>
-            ))}
+          {/* Effect cards */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {Object.entries(result).map(([metric, effect]) => {
+              const current = currentBaseline.current![metric] ?? 0;
+              return <EffectCard key={metric} metric={metric} effect={effect} current={current} />;
+            })}
           </div>
         </div>
       )}
