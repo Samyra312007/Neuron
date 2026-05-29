@@ -1,6 +1,6 @@
 # NEURON — Organizational Nervous System
 
-An AI-powered multi-agent platform that reveals hidden organizational dynamics. Built for a 5-day hackathon.
+An AI-powered multi-agent platform that reveals hidden organizational dynamics.
 
 ## Features
 
